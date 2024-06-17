@@ -5,6 +5,14 @@
     {
       "AbsoluteMoniker": "D:0:0:{6B3A6EE5-D2B4-4333-9567-C49A21B7AC98}|Application\\Application.vcxproj|D:\\memo\\\u7F16\u7A0B\\C\u002B\u002B\\Test\\Application\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
       "RelativeMoniker": "D:0:0:{6B3A6EE5-D2B4-4333-9567-C49A21B7AC98}|Application\\Application.vcxproj|solutionrelative:Application\\main.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{33320066-62CA-4FEB-BDB0-44A7F19EC1B9}|Library\\Library.vcxproj|D:\\memo\\\u7F16\u7A0B\\C\u002B\u002B\\Test\\Library\\library.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{33320066-62CA-4FEB-BDB0-44A7F19EC1B9}|Library\\Library.vcxproj|solutionrelative:Library\\library.h||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{33320066-62CA-4FEB-BDB0-44A7F19EC1B9}|Library\\Library.vcxproj|D:\\memo\\\u7F16\u7A0B\\C\u002B\u002B\\Test\\Library\\library.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}",
+      "RelativeMoniker": "D:0:0:{33320066-62CA-4FEB-BDB0-44A7F19EC1B9}|Library\\Library.vcxproj|solutionrelative:Library\\library.cpp||{D0E1A5C6-B359-4E41-9B60-3365922C2A22}"
     }
   ],
   "DocumentGroupContainers": [
@@ -14,8 +22,34 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 0,
+          "SelectedChildIndex": 2,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "library.cpp",
+              "DocumentMoniker": "D:\\memo\\\u7F16\u7A0B\\C\u002B\u002B\\Test\\Library\\library.cpp",
+              "RelativeDocumentMoniker": "Library\\library.cpp",
+              "ToolTip": "D:\\memo\\\u7F16\u7A0B\\C\u002B\u002B\\Test\\Library\\library.cpp",
+              "RelativeToolTip": "Library\\library.cpp",
+              "ViewState": "AQIAAAAAAAAAAAAAAADwvxEAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
+              "WhenOpened": "2024-06-17T06:42:36.938Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "library.h",
+              "DocumentMoniker": "D:\\memo\\\u7F16\u7A0B\\C\u002B\u002B\\Test\\Library\\library.h",
+              "RelativeDocumentMoniker": "Library\\library.h",
+              "ToolTip": "D:\\memo\\\u7F16\u7A0B\\C\u002B\u002B\\Test\\Library\\library.h",
+              "RelativeToolTip": "Library\\library.h",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000680|",
+              "WhenOpened": "2024-06-17T06:42:32.617Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Document",
               "DocumentIndex": 0,
@@ -24,7 +58,7 @@
               "RelativeDocumentMoniker": "Application\\main.cpp",
               "ToolTip": "D:\\memo\\\u7F16\u7A0B\\C\u002B\u002B\\Test\\Application\\main.cpp",
               "RelativeToolTip": "Application\\main.cpp",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAgAAAAUAAAA",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAYAAAATAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000677|",
               "WhenOpened": "2024-06-17T05:23:53.216Z",
               "EditorCaption": ""

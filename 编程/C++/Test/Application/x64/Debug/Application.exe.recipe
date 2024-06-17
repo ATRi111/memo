@@ -2,6 +2,9 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
+      <FullPath>D:\memo\编程\C++\Test\x64\Debug\Library.dll</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>D:\memo\编程\C++\Test\x64\Debug\Application.exe</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
