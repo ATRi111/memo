@@ -213,6 +213,12 @@ int main()
 
 - 可以设置项目的预处理指令（注意不能有空格），其优先级低于人为编写的预处理指令
 
+## 命名空间
+
+- 仅辅助命名，不与访问修饰符产生协同作用
+- `using namespace`指令根据在代码中位置的不同，在不同作用域内生效（文件内部/类内部/函数内部）
+- 使用时必须避免混淆，**不能在头文件中使用`using namespace`**
+
 ## 关键字
 
 ### auto
@@ -331,72 +337,6 @@ int* const a = &b;
 - 数组的本质是指针，只是提供了一些特殊的语法
 - **数组可以分配在栈上或堆上；但如果编译时数组大小不确定，只能分配在堆上；利用模板参数可以在编译时确定数组大小**
 - **利用sizeof运算符能够计算数组元素个数**
-
-## 智能指针
-
-- **智能指针本质上是包含指针的模板类，其本身不是指针**
-- **通常在栈上分配智能指针类实例，在堆上分配则仍需要主动释放**
-
-### unique_ptr
-
-- **指针指向堆上的地址，unique_ptr实例离开作用域时，释放指针指向的地址**
-- **地址不可复制**（可能造成内存泄漏）
-- 可以由release函数手动回收，相当于提前结束作用域
-
-```c++
-class Test
-{
-public:
-	Test() { cout << "构造" << endl; }
-	~Test() { cout << "析构" << endl; }
-};
-
-int main()
-{
-	{
-		unique_ptr<Test> p = make_unique<Test>();	//构造
-	}												//析构
-}
-```
-
-### shared_ptr
-
-- **指针指向堆上的地址，且额外包含一个int*，指向计数器**
-- 构造新的shared_ptr时，额外给计数器分配内存，初值设为1
-- 复制shared_ptr时，拷贝两个指针，并使计数器+1
-- shared_ptr离开作用域时析构，析构函数中使计数器-1，计数器归0时释放两个指针指向的地址
-- **不能手动回收**（可能造成内存泄漏）
-
-```c++
-int main()
-{
-	{
-		shared_ptr<Test> s1 = make_shared<Test>();		//构造
-		{
-			shared_ptr<Test> s2 = s1;					//引用+1
-		}												//引用-1
-	}													//析构
-}
-```
-
-### weak_ptr
-
-- **指针指向堆上的地址，可以读引用计数器，但不会修改引用计数器，不确保地址没有被回收**
-- **weak_ptr可以赋值给另一个weak_ptr，但不能赋值给另一个shared_ptr**（因为指向的地址可能已被释放）
-- shared_ptr总是可以赋值给weak_ptr（因此也可以通过make_shared函数构造）
-
-```c++
-int main()
-{
-	{
-		weak_ptr<Test> s1;								//构造
-		{
-			shared_ptr<Test> s2 = make_shared<Test>();	//构造
-		}												//析构
-		cout << s1.use_count() << endl;					//0
-	}													
-}
-```
 
 ## 左值/右值
 
@@ -874,6 +814,39 @@ int main()
 }
 ```
 
+## 函数指针
+
+- 除了直接调用，函数只能以指针的形式存在（函数的取地址符可省略）
+
+### lambda表达式
+
+- 用完即弃的匿名方法
+
+```c++
+template<typename T>
+int Compare(T x, T y, int(*Comparer)(T, T))
+{
+	return Comparer(x, y);
+}
+
+int CompareInt(int a, int b)
+{
+	if (a > b)
+		return 1;
+	if (a < b)
+		return -1;
+	return 0;
+}
+
+int main()
+{
+	auto Comparer1 = CompareInt;
+	cout << Compare(1, 2, Comparer1) << endl;
+	int(*Comparer2)(float, float)  = [](float a, float b) { return 0; };
+	cout << Compare(1.0f, 2.0f, Comparer2) << endl;		//直接传入lambda表达式时，无法正确编译
+}
+```
+
 ## 类
 
 - **类不能加修饰符，相当于固定为public**
@@ -1138,19 +1111,23 @@ int main()
 ## 模板
 
 - 模板比泛型的功能更强大，且限制更宽松（编译前不检查语义上的错误，编译时才会发现），模板中的“T”称为”模板参数“
-- **模板参数不仅可以表示未确定的类型（以typename修饰），还可以表示未确定的值（以具体变量类型修饰）**
+- **模板参数不仅可以表示单个未确定的类型（以typename修饰），还可以表示若干个未确定的类型（以typename...修饰），及未确定的值（以具体变量类型名修饰）**
 - 模板本质上是一种特殊的编译方式；仅仅定义模板函数，编译后不包含该函数；以具体模板参数调用了该函数，编译后则包含对应版本的函数
 
 ### 模板函数
 
 - 模板参数用在函数内部
 - 模板函数可以与非模板版本同时存在，调用函数时优先选择非模板版本
+- 需要访问模板类实例时且无法确定某模板参数时，使用模板方法
 
 ```c++
-template<typename T>
-void Print(T obj)
+template<int size>
+void Reset(Array<int, size> a)
 {
-    cout << obj << endl;
+	for (int i = 0; i < size; i++)
+	{
+		a[i] = 0;
+	}
 }
 ```
 
@@ -1177,7 +1154,43 @@ int main()
 }
 ```
 
+### 模板参数列表
+
+```c++
+template<typename R, typename... Args >
+class Function;
+
+template<typename R, typename... Args >
+class Function<R(Args...)>
+{
+public:
+	R(*Func)(Args...);
+	Function(R(*)(Args...) F)
+	{
+		Func = F;
+	}
+};
+
+int Transform(float f)
+{
+	return (int)f;
+}
+
+int main()
+{
+	Function<int(float)> F1 = Transform;
+}
+```
+
 # API
+
+## 通用
+
+### string
+
+- iostream头文件中包含string的定义，但string的一些成员被定义在string头文件中
+- 使用const char*存放字符串，以及一些额外的字段、函数、运算符重载
+- **字符串是不可变的，等号运算符等函数会构造新的字符串**
 
 ## 内存分配
 
@@ -1228,13 +1241,11 @@ int main()
 }
 ```
 
-## string
+## 数据结构
 
-- iostream头文件中包含string的定义，但string的一些成员被定义在string头文件中
-- 使用const char*存放字符串，以及一些额外的字段、函数、运算符重载
-- **字符串是不可变的，等号运算符等函数会构造新的字符串**
+### array
 
-## STL
+- 大小固定且类型可变（利用模板参数），分配在栈上的数组
 
 ### vector
 
@@ -1288,3 +1299,104 @@ int main()
 }			
 ```
 
+## 智能指针
+
+- **智能指针本质上是包含指针的模板类，其本身不是指针**
+- **通常在栈上分配智能指针类实例，在堆上分配则仍需要主动释放**
+
+### unique_ptr
+
+- **指针指向堆上的地址，unique_ptr实例离开作用域时，释放指针指向的地址**
+- **地址不可复制**（可能造成内存泄漏）
+- 可以由release函数手动回收，相当于提前结束作用域
+
+```c++
+class Test
+{
+public:
+	Test() { cout << "构造" << endl; }
+	~Test() { cout << "析构" << endl; }
+};
+
+int main()
+{
+	{
+		unique_ptr<Test> p = make_unique<Test>();	//构造
+	}												//析构
+}
+```
+
+### shared_ptr
+
+- **指针指向堆上的地址，且额外包含一个int*，指向计数器**
+- 构造新的shared_ptr时，额外给计数器分配内存，初值设为1
+- 复制shared_ptr时，拷贝两个指针，并使计数器+1
+- shared_ptr离开作用域时析构，析构函数中使计数器-1，计数器归0时释放两个指针指向的地址
+- **不能手动回收**（可能造成内存泄漏）
+
+```c++
+int main()
+{
+	{
+		shared_ptr<Test> s1 = make_shared<Test>();		//构造
+		{
+			shared_ptr<Test> s2 = s1;					//引用+1
+		}												//引用-1
+	}													//析构
+}
+```
+
+### weak_ptr
+
+- **指针指向堆上的地址，可以读引用计数器，但不会修改引用计数器，不确保地址没有被回收**
+- **weak_ptr可以赋值给另一个weak_ptr，但不能赋值给另一个shared_ptr**（因为指向的地址可能已被释放）
+- shared_ptr总是可以赋值给weak_ptr（因此也可以通过make_shared函数构造）
+
+```c++
+int main()
+{
+	{
+		weak_ptr<Test> s1;								//构造
+		{
+			shared_ptr<Test> s2 = make_shared<Test>();	//构造
+		}												//析构
+		cout << s1.use_count() << endl;					//0
+	}													
+}
+```
+
+## 函数式编程
+
+### function
+
+- function类实例包含一个函数指针(通常通过引用传递)，通过模板规定返回值和参数
+
+```c++
+template<typename T>
+class Comparer
+{
+	function<int(T, T)> CompareFunc;
+public:
+	Comparer(const function<int(T, T)>& c)
+	{
+		CompareFunc = c;
+	}
+	int Compare(T x, T y) const
+	{
+		return CompareFunc(x, y);
+	}
+};
+int CompareInt(int a, int b)
+{
+	if (a > b)
+		return 1;
+	if (a < b)
+		return -1;
+	return 0;
+}
+int main()
+{
+	Comparer<int> comparer(CompareInt);
+	cout << comparer.Compare(1, 2) << endl;
+}
+```
