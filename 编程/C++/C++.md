@@ -261,8 +261,14 @@ foreach(Vertex& v:vertices)
 
 ### 类型转换
 
-- 改用不同类型的指针指向一块地址不会改变地址上的数据，也不会分配新内存，不属于类型转换
 - 类型转换可能会改变数据（的二进制表示）
+- **C++中明确区分了类型转换的四种方式：**
+  - **static_cast：安全的类型转换（如子类指针转父类指针，某些数值类型之间转换）**
+  - **dynamic_cast：不安全的类型转换（如父类指针转子类指针）**
+  - **reinterpret_cast：相当于改用不同类型的指针指向一个地址，不改变该地址上的二进制数据**
+  - **const_cast：将常量指针/常量引用强制转换为非常量指针/非常量引用**
+
+- **能够使用static_cast的上下文中，使用dynamic_cast不会引发异常，但开销更高**
 
 ### 全局变量
 
@@ -679,7 +685,8 @@ class Gen4 : public Gen3
 public:
 	void F() override
 	{
-		cout << "Gen4" << endl;
+		cout << "Gen4";
+		Gen3::F();	//子类函数中调用父类函数
 	}
 };
 
@@ -690,19 +697,7 @@ int main()
 	Gen2* g2 = new Gen3();
 	g2->F();				//Gen3
 	Gen3* g3 = new Gen4();
-	g3->F();				//Gen4
-	Gen1* g4 = new Gen4();
-	g4->F();				//Gen1
-}
-
-int main()
-{
-	Gen1* g1 = new Gen2();
-	g1->F();				//Gen1
-	Gen2* g2 = new Gen3();
-	g2->F();				//Gen3
-	Gen3* g3 = new Gen4();
-	g3->F();				//Gen4
+	g3->F();				//Gen4Gen3
 	Gen1* g4 = new Gen4();
 	g4->F();				//Gen1
 }
@@ -1068,7 +1063,7 @@ class Test
 {
 public:
 	Test() { cout << "构造" << endl; }
-	~Test() { cout << "析构" << endl; }
+	virtual ~Test() { cout << "析构" << endl; }
 };
 void F()
 {
@@ -1084,6 +1079,8 @@ int main()
 
 ### 继承
 
+#### 访问权限
+
 - **类继承时默认采用私有继承（C#默认采用公有继承）**
 - **如果不是非公有继承，不能直接实现多态（子类指针不能隐式转换为父类指针）**
 - **C++允许多重继承，且没有接口的概念**
@@ -1094,7 +1091,58 @@ int main()
 | protected | protected    | protected       | private       |
 | private   | 不可见       | 不可见          | 不可见        |
 
-**private表示子类可见，但不能继续继承；prtoteted表示，子类可见，且可以继续继承**
+- **private表示子类可见，但不能继续继承；prtoteted表示，子类可见，且可以继续继承**
+
+#### 成员函数
+
+- **在子类中，要调用父类中被重写/覆盖的函数时，需指明父类名**
+- **调用子类的构造函数前，必须先调用父类的某个构造函数；如果没有指定，则调用默认构造函数**
+- **如果有可能将子类实例赋值给父类指针，父类的析构函数必须用virtual修饰**
+
+```c++
+class Parent
+{
+public:
+	int age;
+	Parent()
+	{
+		age = 0;
+	}
+	Parent(int age)
+	{
+		this->age = age;
+	}
+	virtual ~Parent()
+	{
+
+	}
+	void F()
+	{
+		cout << "Parent" << endl;
+	}
+};
+class Child : public Parent
+{
+public:
+	Child()
+	{
+
+	}
+	Child(int age) :Parent(age)
+	{
+
+	}
+	~Child()
+	{
+
+	}
+	void F()
+	{
+		Parent::F();
+		cout << "Child" << endl;
+	}
+};
+```
 
 ### 内存布局
 

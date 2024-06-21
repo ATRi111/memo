@@ -5,50 +5,50 @@
 #include "Library.h"
 using namespace std;
 
-struct Vector2
+class Parent
 {
-	float x, y;
-	float Magnitude()
+public:
+	int age;
+	Parent()
 	{
-		return sqrtf(x * x + y * y);
+		age = 0;
+	}
+	Parent(int age)
+	{
+		this->age = age;
+	}
+	virtual ~Parent()
+	{
+
+	}
+	void F()
+	{
+		cout << "Parent" << endl;
 	}
 };
-struct Vector3
+class Child : public Parent
 {
-	float x, y, z;
-	float Magnitude()
+public:
+	Child()
 	{
-		return sqrtf(x * x + y * y + z * z);
+
 	}
-};
-struct Vector4
-{
-	union
+	Child(int age) :Parent(age)
 	{
-		struct
-		{
-			float x, y, z, w;
-		};
-		struct
-		{
-			float r, g, b, a;	//取别名
-		};
-		struct
-		{
-			Vector3 v3;			//视为Vector3，不访问w
-		};
-		struct
-		{
-			Vector2 v2a, v2b;	//视为两个Vector2
-		};
-	};
+
+	}
+	~Child()
+	{
+
+	}
+	void F()
+	{
+		Parent::F();
+		cout << "Child" << endl;
+	}
 };
 
 int main()
 {
-	Vector4 v4 = { 1.0f,2.0f,2.0f,4.0f };
-	cout << v4.v3.Magnitude() << endl;
-	v4.z = 3.0f;
-	cout << v4.v2a.Magnitude() << endl;
-	cout << v4.v2b.Magnitude() << endl;
+
 }
