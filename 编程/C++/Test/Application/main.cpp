@@ -1,54 +1,46 @@
-#include<iostream>
+﻿#include<iostream>
 #include<vector>
 #include<algorithm>
 #include<functional>
 #include "Library.h"
 using namespace std;
 
-class Parent
+class Test
 {
 public:
-	int age;
-	Parent()
+	int* a;
+	Test()
 	{
-		age = 0;
+		a = new int(0);
+		cout << "默认" << endl;
 	}
-	Parent(int age)
+	Test(const Test& t)
 	{
-		this->age = age;
+		a = new int(*(t.a));
+		cout << "拷贝" << endl;
 	}
-	virtual ~Parent()
+	Test(Test&& t) noexcept
 	{
-
+		a = t.a;
+		t.a = nullptr;
+		cout << "移动" << endl;
 	}
-	void F()
+	~Test()
 	{
-		cout << "Parent" << endl;
+		delete a;
+		cout << "析构" << endl;
 	}
 };
-class Child : public Parent
+
+const int F()
 {
-public:
-	Child()
-	{
-
-	}
-	Child(int age) :Parent(age)
-	{
-
-	}
-	~Child()
-	{
-
-	}
-	void F()
-	{
-		Parent::F();
-		cout << "Child" << endl;
-	}
-};
+	return 1;
+}
 
 int main()
 {
-
+	{
+		Test t1;					//默认
+		Visit(move(t1));
+	}								//析构
 }
