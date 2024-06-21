@@ -338,6 +338,29 @@ int* const a = &b;
 - **数组可以分配在栈上或堆上；但如果编译时数组大小不确定，只能分配在堆上；利用模板参数可以在编译时确定数组大小**
 - **利用sizeof运算符能够计算数组元素个数**
 
+## 二维数组
+
+- **每个元素为指向数组的指针**
+- **各数组在内存中不连续，改用一维数组实现通常更高效**
+
+```c++
+int main()
+{
+	int col = 10;
+	int row = 20;
+	int** a1 = new int* [col];
+	for (int i = 0; i < col; i++)
+	{
+		a1[i] = new int[row];
+	}
+	for (int i = 0; i < col; i++)
+	{
+		delete[] a1[i];	//delete[]与new[]依然一一对应
+	}
+	delete[] a1;
+}
+```
+
 ## 左值/右值
 
 - **左值：可以**出现在赋值号左右两侧的对象（**≠确实**出现在赋值号左侧的变量）
@@ -1096,17 +1119,80 @@ int main()
 - **只要一个类中存在至少一个虚函数，便持有一个虚函数表指针，占用8B**
 - **函数实现位于代码段中，而虚函数表中包含若干个地址，指向各个虚函数的具体实现**
 
-### 结构体
+## 结构体
 
 - 结构体和类几乎一样，除了以下区别：
   - **结构体的成员默认为public，且默认采用公有继承**
   - 结构体无法实现模板类等特殊功能
-
 - 习惯上，单纯包含一些public数据的对象会被定义为结构体
+- 可以定义匿名类/结构体：
+  - 如果定义了全局匿名类/结构体，便只能在定义结构体时一并构造其实例
+  - 在类/结构体中定义匿名类/结构体，便可以不指名结类/构体名，直接访问其中的成员
+
+## 联合体
+
+- 各个成员占用相同的一块内存空间：
+  - 第一个成员规定了整个联合体占用的空间
+  - 联合体中每个成员可以视为**指向同一个地址的不同指针**
+- 可以定义匿名联合体，且这种做法相当常见：
+  - 非匿名联合体中可以像类一样定义成员方法，但无法使用继承、虚函数等特性
+  - 不能定义全局匿名联合体，要么命名，要么改变作用域（设为静态也是改变作用域）
+  - 在类/结构体中定义匿名联合体，便可以不指名联合体名，直接访问其中的成员
+
+```C++
+struct Vector2
+{
+	float x, y;
+	float Magnitude()
+	{
+		return sqrtf(x * x + y * y);
+	}
+};
+struct Vector3
+{
+	float x, y, z;
+	float Magnitude()
+	{
+		return sqrtf(x * x + y * y + z * z);
+	}
+};
+struct Vector4
+{
+	union
+	{
+		struct
+		{
+		    float x, y, z, w;
+		};
+		struct
+		{
+			float r, g, b, a;	//取别名
+		};
+		struct
+		{
+			Vector3 v3;			//视为Vector3，不访问w
+		};
+		struct
+		{
+			Vector2 v2a, v2b;	//视为两个Vector2
+		};
+	};
+};
+
+int main()
+{
+	Vector4 v4 = { 1.0f,2.0f,2.0f,4.0f };
+	cout << v4.v3.Magnitude() << endl;
+	v4.z = 3.0f;
+	cout << v4.v2a.Magnitude() << endl;
+	cout << v4.v2b.Magnitude() << endl;
+}
+```
 
 ## 枚举
 
 - 访问枚举常量时，仅需要给出枚举常量名，而不用给出枚举名（与C#不同），这意味着枚举常量不能和其他作用域重合的对象重名
+- 可以利用namespace、using指令辅助命名
 
 ## 模板
 
@@ -1299,6 +1385,22 @@ int main()
 }			
 ```
 
+### sort
+
+- 对标准库中的一些容器进行排序
+- 通过迭代器指定参与排序的元素范围
+- **排序用的函数必须返回bool(返回true表示第一个参数排在前面)**；未指定排序函数时，使用该类型的**<运算符（升序）**
+
+```c++
+int main()
+{
+	vector<int> vs = { 3,5,4,1,2 };
+	sort(vs.begin(), vs.end(), [](int x, int y) {return x >= y; });
+	for (int value : vs)
+		cout << value << endl;
+}
+```
+
 ## 智能指针
 
 - **智能指针本质上是包含指针的模板类，其本身不是指针**
@@ -1400,3 +1502,77 @@ int main()
 	cout << comparer.Compare(1, 2) << endl;
 }
 ```
+
+## 并发编程
+
+- C++中的线程有以下几种状态：
+  - 就绪态：尚未运行；有空闲的CPU资源便自动转为运行态
+  - 运行态：正在运行
+  - 阻塞态：不满足运行条件，暂停运行；等待的事件发生后，转为就绪态
+  - 可连接态：运行完毕，资源尚未释放
+  - 终止态：资源已释放，线程本身的声明周期尚未结束
+
+### thread
+
+```c++
+bool finished;
+void DoWork()
+{
+	using namespace std::literals::chrono_literals;
+	static int i = 0;
+	while(!finished)
+	{
+		i++;
+		this_thread::sleep_for(1s);
+		cout << "Working" << endl;
+	}
+}
+
+int main()
+{
+	thread t1(DoWork);	//创建线程p1，设为就绪态
+	cin.get();			//阻塞主线程，等到用户输入后转为就绪态
+	finished = true;	
+	t1.join();			//阻塞主线程，等到p1线程转为可连接态后，连接t1，主线程转为就绪态
+}
+```
+
+## 计时
+
+### high_resolution_clock
+
+- 精确获取时间，但不适合用于计时
+
+```c++
+using namespace std::chrono;
+using namespace std::literals::chrono_literals;
+class AutoTimer
+{
+public:
+	time_point<steady_clock> start, end;
+	AutoTimer()
+	{
+		start = high_resolution_clock::now();
+	}
+	~AutoTimer()
+	{
+		end = high_resolution_clock::now();
+		cout << (end - start).count() / 1e6 << endl;
+	}
+};
+
+void Function()
+{
+	AutoTimer timer;
+	for (int i = 0; i < 100; i++)
+	{
+		cout << "Hello" << endl;
+	}
+}		//AutoTimer析构时自动计时
+
+int main()
+{
+	Function();
+}
+```
+

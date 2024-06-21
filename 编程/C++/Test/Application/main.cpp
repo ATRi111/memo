@@ -1,19 +1,54 @@
 #include<iostream>
-#include<string>
-#include"library.h"
-#include"glfw3.h"
+#include<vector>
+#include<algorithm>
+#include<functional>
+#include "Library.h"
 using namespace std;
 
-#define DEBUGMODE 0
-
-#if DEBUGMODE == 1
-    #define LOG(x) cout << x << endl;
-#else
-    #define LOG(x)
-#endif
+struct Vector2
+{
+	float x, y;
+	float Magnitude()
+	{
+		return sqrtf(x * x + y * y);
+	}
+};
+struct Vector3
+{
+	float x, y, z;
+	float Magnitude()
+	{
+		return sqrtf(x * x + y * y + z * z);
+	}
+};
+struct Vector4
+{
+	union
+	{
+		struct
+		{
+			float x, y, z, w;
+		};
+		struct
+		{
+			float r, g, b, a;	//取别名
+		};
+		struct
+		{
+			Vector3 v3;			//视为Vector3，不访问w
+		};
+		struct
+		{
+			Vector2 v2a, v2b;	//视为两个Vector2
+		};
+	};
+};
 
 int main()
 {
- 	int a = 1;
-    LOG(a);
+	Vector4 v4 = { 1.0f,2.0f,2.0f,4.0f };
+	cout << v4.v3.Magnitude() << endl;
+	v4.z = 3.0f;
+	cout << v4.v2a.Magnitude() << endl;
+	cout << v4.v2b.Magnitude() << endl;
 }
