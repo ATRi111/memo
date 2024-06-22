@@ -32,15 +32,12 @@ public:
 	}
 };
 
-const int F()
+void F(const Test&& a)
 {
-	return 1;
+
 }
 
 int main()
 {
-	{
-		Test t1;					//默认
-		Visit(move(t1));
-	}								//析构
+
 }
