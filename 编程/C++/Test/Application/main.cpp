@@ -32,12 +32,17 @@ public:
 	}
 };
 
-void F(const Test&& a)
+class C
 {
-
-}
+public:
+	Test t;
+	C()
+	{
+		
+	}
+};
 
 int main()
 {
-
+	C c;
 }
