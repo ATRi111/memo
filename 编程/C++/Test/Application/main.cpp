@@ -4,12 +4,24 @@
 #include "Library.h"
 using namespace std;
 
+struct A
+{
+	int num;
+	A(int num)
+		:num(num)
+	{
+
+	}
+};
+
+const A a0;
+struct B
+{
+	const static int a1 = 1;
+};
 
 int main()
 {
-	string s1 = "Hello";
-	string s2 = "World";
-	cout << &s2 << endl;
-	s2 += s1;
-	cout << &s2 << endl;
+	B b;
+	cout << b.a1.num << endl;
 }
