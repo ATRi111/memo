@@ -1567,16 +1567,11 @@ int main()
 
 ## 数据结构
 
+- **各类容器作为参数传递时，大部分情况下都是传引用**
+
 ### array
 
 - 大小固定且类型可变（利用模板参数），分配在栈上的数组
-
-### map/set
-
-- map中的每个元素包含键值对，set则仅包含值
-- **通过红黑树实现**
-  - **元素是始终有序的，可以在构造时传入比较方法以自定义顺序，以及按顺序访问**
-  - **插入、删除的时间复杂度为O(log N)，慢于散列**
 
 ### vector
 
@@ -1635,17 +1630,42 @@ int main()
 
 - 对标准库中的一些容器进行排序
 - 通过迭代器指定参与排序的元素范围
-- **排序用的函数必须返回bool(返回true表示第一个参数排在前面)**；未指定排序函数时，使用该类型的**<运算符（升序）**
+- **通过函数指针指定排序方式（返回true表示第一个参数排在前面）**
+  - **如果是非静态函数，需要改用lambda表达式**
+  - 未指定排序函数时，使用该类型的**<运算符（升序）**
+
 
 ```c++
-int main()
+class VertexComparer 
 {
-	vector<int> vs = { 3,5,4,1,2 };
-	sort(vs.begin(), vs.end(), [](int x, int y) {return x >= y; });
-	for (int value : vs)
-		cout << value << endl;
+public:
+    bool Compare(Vector2Int a, Vector2Int b) const;
+};
+
+int main() {
+    std::vector<Vector2Int> ret;
+	sort(ret.begin(), ret.end(), 
+         [&comparer] (const Vector2Int& a, const Vector2Int& b) {return comparer.Compare(a, b);} );
+    return 0;
 }
 ```
+
+### map/set
+
+- map中的每个元素包含键值对，set则仅包含值
+- **通过红黑树实现**
+  - **元素是始终有序的，可以在构造时传入比较方法以自定义顺序，以及按顺序访问**
+  - **存放自定义类型时，必须确保该类型重载了<**
+  - **插入、删除的时间复杂度为O(log N)**
+
+### unordered_map/unordered_set
+
+- unordered_map中的每个元素包含键值对，unordered_set则仅包含值
+- **通过散列实现**
+  - **使用拉链法避免冲突**
+  - **元素是无序的**
+  - **存放自定义类型时，必须确保该类型重载了==，以及**
+  - **插入、删除的时间复杂度近似为O(log 1)**
 
 ## 智能指针
 
