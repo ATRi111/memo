@@ -117,7 +117,10 @@
 
 ## 调试
 
-- Visual Studio提供了Debug模式和Release模式，Debug模式下，编译器会执行许多额外的操作，使得各种调试功能能够使用
+- Visual Studio提供了Debug模式和Release模式
+  - Debug模式：编译器执行一些额外的工作，使调试得以进行
+  - Release模式：编译器会忽略一些bug，试图使程序继续运行下去
+
 
 # 概念
 
