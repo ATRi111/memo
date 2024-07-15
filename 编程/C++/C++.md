@@ -1665,8 +1665,22 @@ int main() {
 - **通过散列实现**
   - **使用拉链法避免冲突**
   - **元素是无序的**
-  - **存放自定义类型时，必须确保该类型重载了==，以及**
+  - **存放自定义类型时，必须确保该类型重载了==，并为该类型定义了hash模板结构体**
   - **插入、删除的时间复杂度近似为O(log 1)**
+
+```c++
+namespace std	//定义在特定的命名空间中可避免定义冲突
+{
+	template <>
+	struct hash<Vector3>	//在任意文件中定义此模板结构体,便可在整个项目中使用unodered_set<Vector3>
+	{
+		size_t operator()(const Vector3& v) const
+		{
+			return hash<float>()(v.x) ^ hash<float>()((v.y)) ^ hash<float>()((v.z));	//用异或运算计算哈希值
+		}
+	};
+}
+```
 
 ## 智能指针
 
