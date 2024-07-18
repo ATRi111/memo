@@ -1,27 +1,27 @@
 ﻿#include<iostream>
 #include<vector>
 #include<string>
+#include<functional>
 #include "Library.h"
 using namespace std;
 
-struct A
+template<typename R, typename... Args >
+class Function
 {
-	int num;
-	A(int num)
-		:num(num)
+public:
+	R(*Func)(Args...);
+	Function(R(*F)(Args...))
 	{
-
+		Func = F;
 	}
 };
 
-const A a0;
-struct B
+int Transform(float f)
 {
-	const static int a1 = 1;
-};
+	return (int)f;
+}
 
 int main()
 {
-	B b;
-	cout << b.a1.num << endl;
+	Function<int,float> F1 = Transform;
 }
