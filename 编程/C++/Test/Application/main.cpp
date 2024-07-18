@@ -5,23 +5,14 @@
 #include "Library.h"
 using namespace std;
 
-template<typename R, typename... Args >
-class Function
+int sum(int a, int b) 
 {
-public:
-	R(*Func)(Args...);
-	Function(R(*F)(Args...))
-	{
-		Func = F;
-	}
-};
-
-int Transform(float f)
-{
-	return (int)f;
+    return a + b;
 }
 
-int main()
+int main() 
 {
-	Function<int,float> F1 = Transform;
+    auto sum_five = bind(sum, 5, placeholders::_1);   //将sum函数的第一个参数固定为5，以此生成一个新的可调用对象
+    sum_five(10);
+    return 0;
 }

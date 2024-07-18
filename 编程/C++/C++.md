@@ -217,7 +217,7 @@ void Library::LogA() const
 - 定义宏时，如果要表示换行，使用`\`
 - 常见用途：
   - **类似枚举常量的作用**
-  - **简化多次出现的重复代码（同时起到封装的作用）**
+  - **简化多次出现的重复代码**
   - **尽可能在编译时（而不是运行时）确定不同上下文对应的代码（如Debug和Release，不同平台）**
 
 ```c++
@@ -234,6 +234,14 @@ int main()
  	int a = 1;
     LOG(a);
 }
+```
+
+```c++
+//避免在每次继承Event类时重复书写以上代码
+#define EVENT_CLASS_TYPE(type) static EventType GetStaticType() { return EventType::type; }\
+								virtual EventType GetEventType() const override { return GetStaticType(); }\
+								virtual const char* GetName() const override { return #type; }
+//#type表示,将type这个宏文本转换成字符串
 ```
 
 ![image-20240617162255283](Image/image-20240617162255283.png)
@@ -1546,6 +1554,13 @@ int main()
 }
 ```
 
+### 模板using指令
+
+```c++
+template<typename T>
+using Ref = std::shared_ptr<T>;	//给模板类取别名
+```
+
 # API
 
 ## 通用
@@ -1804,7 +1819,7 @@ int main()
 template<typename T>
 class Comparer
 {
-	function<int(T, T)> CompareFunc;
+	function<int(T, T)> CompareFunc;	//function类包含模板参数列表，且包含括号这一特殊语法
 public:
 	Comparer(const function<int(T, T)>& c)
 	{
@@ -1827,6 +1842,24 @@ int main()
 {
 	Comparer<int> comparer(CompareInt);
 	cout << comparer.Compare(1, 2) << endl;
+}
+```
+
+### bind
+
+- 通过现有函数生成新的可调用对象
+
+```c++
+int sum(int a, int b) 
+{
+    return a + b;
+}
+
+int main() 
+{
+    auto sum_five = bind(sum, 5, placeholders::_1);   //将sum函数的第一个参数固定为5，以此生成一个新的可调用对象
+    sum_five(10);
+    return 0;
 }
 ```
 
