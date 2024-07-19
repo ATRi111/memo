@@ -367,7 +367,7 @@ foreach(Vertex& v:vertices)
 - 类型转换可能会改变数据（的二进制表示）
 - 可以利用**类型转换运算符**（配合指针、引用等）进行各种类型转换，其行为可能是不确定、不安全的
 - C++中添加了四个**类型转换函数**：
-  - **static_cast：安全的类型转换（如子类指针转父类指针，某些数值类型之间转换）**
+  - **static_cast：隐式类型转换，安全，可以省略（如子类指针转父类指针，某些数值类型之间转换）**
   - **dynamic_cast：指针、引用之间不安全的类型转换（如父类指针转子类指针）**
   - **reinterpret_cast：相当于改用不同类型的指针指向一个地址，不改变该地址上的二进制数据**
   - **const_cast：将常量指针/常量引用强制转换为非常量指针/非常量引用**
@@ -392,11 +392,14 @@ foreach(Vertex& v:vertices)
 - **（在64位系统上）指针本身只是一个表示地址的无符号8字节整数（相当于size_t），不与特定的数据类型绑定**
 - **指针类型代表以何种方式访问该指针指向的数据，且可以用不同类型的指针指向同一地址**
   - **但指针类型的改变不一定是合法的，编译器对非法操作的处理是不确定的，要谨慎使用**
-- **void*也是合法的指针类型，没有指明以何种方式访问该指针指向的数据，且可以隐式转换成其他指针类型**
+- **void*也是合法的指针类型，没有指明以何种方式访问该指针指向的数据**
+  - **所有指针类型可以static_cast为void***
+  - **void*须reinterpret_cast为其他指针**
+
 
 ### 指针运算
 
-- **指针可以强制类型转换（reinterpret_cast）为size_t**
+- **指针可以reinterpret_cast为size_t**
 - **指针加/减常数时，实际的变化量要乘以指针指向数据占用的空间**
 - **两指针相加无意义，两指针相减，返回值为size_t，结果要除以指针指向数据占用的空间**
 
@@ -1004,7 +1007,6 @@ int main()
 ## 函数指针
 
 - 除了直接调用，函数只能以指针的形式存在（一般情况下，函数的取地址符可省略）
-- 不同于一般的指针，**函数指针不能相减，不能比较是否相等，不能输出到控制台（依然可以强制类型转换（reinterpret_cast）为size_t）**
 - 无法直接获取**成员函数**的地址
 
 ```c++
@@ -1839,23 +1841,53 @@ int main()
 ### function
 
 - **function类实例包含一个函数指针**，通过模板规定返回值和参数
-- **成员函数**可以转换为非成员函数，然后赋值给function（可以理解为在参数列表开头添加一个参数，类型为该成员所属类的指针）；特别地，这种情况下函数的**取地址符不可省略**
+  - 通过`target<?>()`成员函数获取其包含的函数指针（可以判断是否为同一函数）
+  - 通过`target_type()`成员函数获取其函数指针的类型（可以比较类型是否相同）
+
+- **成员函数**可以转换为非成员函数，然后赋值给function（可以理解为在参数列表开头添加一个参数，类型为该成员所属类的指针）
+  - 这种情况下，函数的**取地址符不可省略**
+
+- **如果将bind的返回值赋值给function实例，`target<?>()`的值总是为0，因此无法直接判断是否为同一函数**
 
 ```c++
 class Comparer
 {
 public:
-    bool Compare(int a, int b) 
+    bool Compare(int a, int b)
     {
         return a > b;
     }
 };
 
+bool StaticCompare1(int a, int b)
+{
+    return a > b;
+}
+bool StaticCompare2(int a, int b)
+{
+    return a < b;
+}
+
 int main()
 {
-    Comparer c;
-    function<bool(Comparer*, int, int)> F = &Comparer::Compare;
-    cout << F(&c, 1, 2) << endl;
+    Comparer c1;
+    function<void(int, int)> F1 = std::bind(&Comparer::Compare, &c1, placeholders::_1, placeholders::_2);
+    auto p1 = F1.target<bool(*)(int, int)>();
+
+    Comparer c2;
+    function<void(int, int)> F2 = std::bind(&Comparer::Compare, &c2, placeholders::_1, placeholders::_2);
+    auto p2 = F2.target<bool(*)(int, int)>();
+
+    function<bool(int, int)> F3 = StaticCompare1;
+    auto p3 = F3.target<bool(*)(int, int)>();
+    function<bool(int, int)> F4 = StaticCompare2;
+    auto p4 = F4.target<bool(*)(int, int)>();
+
+    cout << p1 << endl;	//0
+    cout << p2 << endl;	//0
+    cout << p3 << endl;
+    cout << p4 << endl;
+
     return 0;
 }
 ```
