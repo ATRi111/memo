@@ -255,6 +255,30 @@ int main()
 - `using namespace`指令根据在代码中位置的不同，在不同作用域内生效（文件内部/类内部/函数内部）
 - 使用时必须避免混淆，绝对不能在**头文件的全局范围中**使用`using namespace`
 
+```c++
+int Add(int a, int b)
+{
+    return a + b;
+}
+namespace AddFunction
+{
+    int Add(int a, int b)
+    {
+        return a - b;
+    }
+}
+
+int main() 
+{
+    using namespace std;
+    using namespace AddFunction;
+    //cout << Add(1, 2);
+    cout << ::Add(1, 2);        //::表示default global namespace
+    cout << AddFunction::Add(1, 2);
+    return 0;
+}
+```
+
 ## 关键字
 
 ### auto
@@ -365,16 +389,16 @@ foreach(Vertex& v:vertices)
 
 ### 指针类型
 
-- **指针本身只是一个表示地址的无符号8字节整数（在64位系统上），不与特定的数据类型绑定**
+- **（在64位系统上）指针本身只是一个表示地址的无符号8字节整数（相当于size_t），不与特定的数据类型绑定**
 - **指针类型代表以何种方式访问该指针指向的数据，且可以用不同类型的指针指向同一地址**
   - **但指针类型的改变不一定是合法的，编译器对非法操作的处理是不确定的，要谨慎使用**
-
 - **void*也是合法的指针类型，没有指明以何种方式访问该指针指向的数据，且可以隐式转换成其他指针类型**
 
 ### 指针运算
 
+- **指针可以强制类型转换（reinterpret_cast）为size_t**
 - **指针加/减常数时，实际的变化量要乘以指针指向数据占用的空间**
-- **两指针相加无意义，两指针相减，返回值为int，结果要除以指针指向数据占用的空间**
+- **两指针相加无意义，两指针相减，返回值为size_t，结果要除以指针指向数据占用的空间**
 
 ### NULL和nullptr
 
@@ -409,14 +433,14 @@ const char* const p2 = &c;	//常量指针常量
 ## 引用
 
 - 引用是变量的“别名”，有类似**指针常量**的特性，在引用符号右侧再加const修饰没有意义
-  - **对已初始化的引用再次赋值，实际上是修改引用指向的内容，而不是修改地址本身**
+  - **对已初始化的引用赋值，实际上是修改引用指向的内容（这要求被引用实例实现了=运算符），而不是修改地址本身**
 
 - **引用和指针的许多语法有所不同，某些情况下不能将其视为常量指针（如函数返回值）**
 - 引用不同于C#的引用类型，后者指向的地址是可变的，且可以设为空
 
 
 ```c++
-void F(int& arg);	
+void F(int& arg);
 void F(int* const arg);
 int& a = b;	 
 int* const a = &b;
@@ -979,7 +1003,9 @@ int main()
 
 ## 函数指针
 
-- 除了直接调用，函数只能以指针的形式存在（函数的取地址符可省略）
+- 除了直接调用，函数只能以指针的形式存在（一般情况下，函数的取地址符可省略）
+- 不同于一般的指针，**函数指针不能相减，不能比较是否相等，不能输出到控制台（依然可以强制类型转换（reinterpret_cast）为size_t）**
+- 无法直接获取**成员函数**的地址
 
 ```c++
 int Func(int a)
@@ -997,7 +1023,7 @@ int main(int argc, const char* argv[])
 }
 ```
 
-### lambda表达式
+## lambda表达式
 
 - 用完即弃的匿名方法
 
@@ -1037,16 +1063,16 @@ int main()
   - **类析构时自动释放**
 
 - 如果将成员变量定义为**指针**：
-  - **若在类内部分配地址，类析构时必须回收**
-  - **若来源为外部地址，可以深拷贝，析构时释放目的地址，源地址在外部人为释放（效率低，通用的做法）**
+  - **若在类内部分配地址，一般必须在类析构时回收**
+  - **若来源为外部地址，可以深拷贝，析构时释放目的地址，源地址在外部人为释放（效率低但通用的做法）**
   - **若来源为外部堆地址，可以浅拷贝，可以选择析构时释放或由外部释放（效率高，必须向外部说明，必须避免传入栈地址）**
   - **若来源为外部栈地址，可以浅拷贝，等外部自动释放（效率高，必须确保使用时外部尚未释放该成员的空间）**
-  - **构造时可以暂时初始化为空，之后重新赋值**
+  - **构造时可以初始化为空，之后重新赋值**
 
 - 如果将成员变量定义为**引用**：
   - **类析构时自动释放（释放指针本身的空间，而不是被引用对象占用的空间）**
   - **若来源为类外部对象，仅浅拷贝地址（必须确保使用时外部尚未释放该成员的空间）**
-  - **必须初始化为非空值**
+  - **构造时必须引用现存对象**
 
 
 ### 可变成员变量
@@ -1099,30 +1125,6 @@ public:
 };
 
 const int Library::num = 1;	//初始化,注意const不能省略（如果有引用或指针,也不能省略）
-```
-
-### 成员函数
-
-- **无法直接获取成员函数的地址，每个实例的同一成员函数有各自不同的地址**
-- **bind可以获取成员函的函数指针（可以理解为，在成员函数的参数列表开头添加一个参数，类型为该类指针，以转换为静态函数）**
-
-```c++
-class Comparer
-{
-public:
-    bool Compare(int a, int b)
-    {
-        return a > b;
-    }
-};
-
-int main()
-{
-    Comparer c;
-    function<bool(int, int)> F = bind(&Comparer::Compare, &c, placeholders::_1, placeholders::_2);
-    //特别地，当bind函数的第一个参数为成员函数转换而来的静态函数时,取地址符号不可省略
-    return 0;
-}
 ```
 
 ### 构造函数
@@ -1597,7 +1599,7 @@ using Ref = std::shared_ptr<T>;	//给模板类取别名
 
 - **小字符串优化**：
   - 字符数量少于某个预设值（通常为15）的字符串会被分配到某个**栈上一块预分配好的缓冲区**中，以降低开销
-  - 如何正确地分配回收栈空间？
+  - 如何正确地自动分配回收栈空间？
 
 
 ## 内存分配
@@ -1651,7 +1653,7 @@ int main()
 
 ## 数据结构
 
-- **各类容器作为参数传递时，大部分情况下都是传引用**
+- **各类容器作为参数传递时，大部分情况下传引用（传实例则发生深拷贝）**
 
 ### array
 
@@ -1660,7 +1662,6 @@ int main()
 ### vector
 
 - 存放同种类型元素、可动态增长的数组
-- 作为参数传递时，通常传引用而不是实例
 - push_back通常会调用**拷贝构造函数**；如果传入的是右值，则优先调用**移动构造函数**（若存在）
 - emplace_back如果直接传入构造函数的参数，则直接在vertor容器内构造实例，避免拷贝或移动；传入实例则与push_back一致
 - 删除元素、数组扩容时，可能会引发元素移动，此时**优先调用移动赋值运算符**
@@ -1727,7 +1728,8 @@ public:
     bool Compare(Vector2Int a, Vector2Int b) const;
 };
 
-int main() {
+int main() 
+{
     std::vector<Vector2Int> ret;
 	sort(ret.begin(), ret.end(), 
          [&comparer] (const Vector2Int& a, const Vector2Int& b) {return comparer.Compare(a, b);} );
@@ -1753,7 +1755,7 @@ int main() {
   - **插入、删除的时间复杂度近似为O(log 1)**
 
 ```c++
-namespace std	//头文件中，只在局部使用命名空间
+namespace std	//表示在以下代码段省略std,不是表示以下代码段仅在引用std时生效
 {
 	template <>
 	struct hash<Vector3>	//在头文件定义此模板结构体,便可在任何包含此头文件的文件中使用unodered_set<Vector3>
@@ -1837,44 +1839,33 @@ int main()
 ### function
 
 - **function类实例包含一个函数指针**，通过模板规定返回值和参数
+- **成员函数**可以转换为非成员函数，然后赋值给function（可以理解为在参数列表开头添加一个参数，类型为该成员所属类的指针）；特别地，这种情况下函数的**取地址符不可省略**
 
 ```c++
-template<typename T>
 class Comparer
 {
-	function<int(T, T)> CompareFunc;	//function类包含模板参数列表，且包含括号这一特殊语法
 public:
-	Comparer(const function<int(T, T)>& c)
-	{
-		CompareFunc = c;
-	}
-	int Compare(T x, T y) const
-	{
-		return CompareFunc(x, y);
-	}
+    bool Compare(int a, int b) 
+    {
+        return a > b;
+    }
 };
-int CompareInt(int a, int b)
-{
-	if (a > b)
-		return 1;
-	if (a < b)
-		return -1;
-	return 0;
-}
+
 int main()
 {
-	Comparer<int> comparer(CompareInt);
-	cout << comparer.Compare(1, 2) << endl;
+    Comparer c;
+    function<bool(Comparer*, int, int)> F = &Comparer::Compare;
+    cout << F(&c, 1, 2) << endl;
+    return 0;
 }
 ```
 
 ### bind
 
 - 通过现有函数生成新的可调用对象
-  - 可以**固定**若干个参数
+  - 可以**固定**若干个参数（如成员函数转换而得的非成员函数的第一个参数）
   - 可以调整**未被固定的参数**的顺序
 
-- 注意bind返回的是右值
 
 ```c++
 void Print(int a, int b, int c)
@@ -1887,6 +1878,24 @@ int main()
     //(将来调用F时)F的第2个参数被传给Print的第1个参数，4被传给Print的第二个参数,F的第1个参数被传给Print的第三个参数
     function<void(int, int)> F = bind(&Print, placeholders::_2, 4, placeholders::_1);
     F(2, 3);    //342
+    return 0;
+}
+```
+
+```c++
+class Comparer
+{
+public:
+    bool Compare(int a, int b)
+    {
+        return a > b;
+    }
+};
+
+int main()
+{
+    Comparer c;
+    function<bool(int, int)> F = bind(&Comparer::Compare, &c, placeholders::_1, placeholders::_2);
     return 0;
 }
 ```
