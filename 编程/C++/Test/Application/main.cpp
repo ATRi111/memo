@@ -5,14 +5,14 @@
 #include "Library.h"
 using namespace std;
 
-int sum(int a, int b) 
+void Print(int a, int b, int c)
 {
-    return a + b;
+    cout << a << b << c << endl;
 }
 
-int main() 
+int main()
 {
-    auto sum_five = bind(sum, 5, placeholders::_1);   //将sum函数的第一个参数固定为5，以此生成一个新的可调用对象
-    sum_five(10);
+    function<void(int, int)> F = bind(&Print, placeholders::_2, 4, placeholders::_1);
+    F(2, 3);    //342
     return 0;
 }

@@ -1101,6 +1101,29 @@ public:
 const int Library::num = 1;	//初始化,注意const不能省略（如果有引用或指针,也不能省略）
 ```
 
+### 成员函数
+
+- **无法直接获取成员函数的地址，每个实例的同一成员函数有各自不同的地址**
+- **bind可以获取成员函的函数指针（可以理解为，在成员函数的参数列表开头添加一个参数，类型为该类指针，以转换为静态函数）**
+
+```c++
+class Comparer
+{
+public:
+    bool Compare(int a, int b)
+    {
+        return a > b;
+    }
+};
+
+int main()
+{
+    Comparer c;
+    function<bool(int, int)> F = bind(&Comparer::Compare, &c, placeholders::_1, placeholders::_2);
+    //特别地，当bind函数的第一个参数为成员函数转换而来的静态函数时,取地址符号不可省略
+    return 0;
+}
+```
 
 ### 构造函数
 
@@ -1692,7 +1715,7 @@ int main()
 - 对标准库中的一些容器进行排序
 - 通过迭代器指定参与排序的元素范围
 - **通过函数指针指定排序方式（返回true表示第一个参数排在前面）**
-  - **如果是非静态函数，需要改用lambda表达式**
+  - **如果是成员函数，需要bind或lambda表达式来绑定，以获取函数指针**
   - 未指定排序函数时，使用该类型的**<运算符（升序）**
   - 提供的函数必须有**严格弱排序（如果传入某对参数时返回true，那么交换这对参数后一定不能依然返回true）**的性质
 
@@ -1848,17 +1871,22 @@ int main()
 ### bind
 
 - 通过现有函数生成新的可调用对象
+  - 可以**固定**若干个参数
+  - 可以调整**未被固定的参数**的顺序
+
+- 注意bind返回的是右值
 
 ```c++
-int sum(int a, int b) 
+void Print(int a, int b, int c)
 {
-    return a + b;
+    cout << a << b << c << endl;
 }
 
-int main() 
+int main()
 {
-    auto sum_five = bind(sum, 5, placeholders::_1);   //将sum函数的第一个参数固定为5，以此生成一个新的可调用对象
-    sum_five(10);
+    //(将来调用F时)F的第2个参数被传给Print的第1个参数，4被传给Print的第二个参数,F的第1个参数被传给Print的第三个参数
+    function<void(int, int)> F = bind(&Print, placeholders::_2, 4, placeholders::_1);
+    F(2, 3);    //342
     return 0;
 }
 ```
