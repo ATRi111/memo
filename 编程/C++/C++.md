@@ -704,7 +704,7 @@ public:
 
 [4]：这种情况下，正确地先调用拷贝构造函数，再释放本地变量
 
-[5]：参数定义成类实例时，传参时才会发生拷贝，这种情况才算”参数类实例"；传引用或指针则仅拷贝地址，此情况下如果返回引用参数，属于第四种情况
+[5]：特指参数定义成了类实例，并返回参数的情况；如果参数定义成了引用或指针，再返回参数，实际上会导致[4]
 
 ```c++
 class Test
@@ -1007,7 +1007,6 @@ int main()
 ## 函数指针
 
 - 除了直接调用，函数只能以指针的形式存在（一般情况下，函数的取地址符可省略）
-- 无法直接获取**成员函数**的地址
 
 ```c++
 int Func(int a)
@@ -1021,6 +1020,27 @@ int main(int argc, const char* argv[])
     p1 = Func;
 	typedef int (*int_int)(int a);	//int_int定义了一个函数指针类型
 	int_int p2 = Func;
+    return 0;
+}
+```
+
+- **无法直接获取成员函数的地址**
+
+```c++
+class Comparer
+{
+public:
+    bool Compare(int a, int b)
+    {
+        return a > b;
+    }
+};
+
+int main()
+{
+    Comparer c;
+    auto F = Comparer::Compare;		//F与特定类实例无关(无法用于区分来自不同实例的同一成员方法)
+    cout << (c.*F)(1, 0) << endl;
     return 0;
 }
 ```
@@ -1840,25 +1860,13 @@ int main()
 
 ### function
 
-- **function类实例包含一个函数指针**，通过模板规定返回值和参数
-  - 通过`target<?>()`成员函数获取其包含的函数指针（可以判断是否为同一函数）
-  - 通过`target_type()`成员函数获取其函数指针的类型（可以比较类型是否相同）
-
-- **成员函数**可以转换为非成员函数，然后赋值给function（可以理解为在参数列表开头添加一个参数，类型为该成员所属类的指针）
-  - 这种情况下，函数的**取地址符不可省略**
-
-- **如果将bind的返回值赋值给function实例，`target<?>()`的值总是为0，因此无法直接判断是否为同一函数**
+- **function类实例包含一个函数指针**，可以通过该实例调用函数
+  - 通过模板参数规定函数的返回值、参数列表
+  - 通过`target<?>()`成员函数获取**指向函数指针的指针**（取内容后可以判断是否为同一函数）
+  - 通过`target_type()`成员函数获取其**函数指针的类型**（可以比较参数列表及返回值是否相同）
+  
 
 ```c++
-class Comparer
-{
-public:
-    bool Compare(int a, int b)
-    {
-        return a > b;
-    }
-};
-
 bool StaticCompare1(int a, int b)
 {
     return a > b;
@@ -1870,24 +1878,60 @@ bool StaticCompare2(int a, int b)
 
 int main()
 {
-    Comparer c1;
-    function<void(int, int)> F1 = std::bind(&Comparer::Compare, &c1, placeholders::_1, placeholders::_2);
+    function<bool(int, int)> F1 = StaticCompare1;
     auto p1 = F1.target<bool(*)(int, int)>();
-
-    Comparer c2;
-    function<void(int, int)> F2 = std::bind(&Comparer::Compare, &c2, placeholders::_1, placeholders::_2);
+    function<bool(int, int)> F2 = StaticCompare2;
     auto p2 = F2.target<bool(*)(int, int)>();
 
-    function<bool(int, int)> F3 = StaticCompare1;
-    auto p3 = F3.target<bool(*)(int, int)>();
-    function<bool(int, int)> F4 = StaticCompare2;
-    auto p4 = F4.target<bool(*)(int, int)>();
+    cout << (*p1 == StaticCompare1) << endl;    //1
+    cout << (*p1 == *p2) << endl;               //0
+    cout << (F1.target_type() == F2.target_type()) << endl;   //1
+    return 0;
+}
+```
 
-    cout << p1 << endl;	//0
-    cout << p2 << endl;	//0
-    cout << p3 << endl;
-    cout << p4 << endl;
+- **成员函数不能直接赋值给function**
 
+```c++
+class Comparer
+{
+public:
+    bool Compare(int a, int b)
+    {
+        return a > b;
+    }
+};
+
+int main()
+{
+    Comparer c;
+    function<bool(Comparer&, int, int)> F1 = &Comparer::Compare;
+    cout << F1(c, 2, 1) << endl;
+    cout << F1.target_type().name() << endl;    //bool (__cdecl Comparer::*)(int,int) __ptr64
+    return 0;
+}
+```
+
+### mem_fn
+
+- 通过**成员函数**生成**可调用对象**（确定返回值的具体模板参数很麻烦）
+- **实质上是在成员函数的参数列表开头添加一个参数，类型为该函数所属类指针，由此将成员函数转换为非成员函数**
+
+```c++
+class Comparer
+{
+public:
+    bool Compare(int a, int b)
+    {
+        return a > b;
+    }
+};
+
+int main()
+{
+    Comparer c;
+    auto F = mem_fn(&Comparer::Compare);    //取地址可以省略
+    cout << F(&c, 1, 0) << endl;            //取地址可以省略
     return 0;
 }
 ```
@@ -1895,9 +1939,8 @@ int main()
 ### bind
 
 - 通过现有函数生成新的可调用对象
-  - 可以**固定**若干个参数（如成员函数转换而得的非成员函数的第一个参数）
+  - 可以**固定**若干个参数
   - 可以调整**未被固定的参数**的顺序
-
 
 ```c++
 void Print(int a, int b, int c)
@@ -1914,6 +1957,8 @@ int main()
 }
 ```
 
+- **bind可以在mem_fn的基础上，固定住“成员函数转换而得的非成员函数”的第一个参数**
+
 ```c++
 class Comparer
 {
@@ -1927,7 +1972,38 @@ public:
 int main()
 {
     Comparer c;
+    //第一个取地址不可省略，第二个取地址可以省略
     function<bool(int, int)> F = bind(&Comparer::Compare, &c, placeholders::_1, placeholders::_2);
+    cout << F(2, 1) << endl;
+    return 0;
+}
+```
+
+- 如果将bind返回的可调用对象赋值给function：
+  - **function模板中的参数列表在“合理范围”内是可变的，不需要与bind返回的可调用对象完全对应（编译器无法检查是否对应）**
+  - **`target<?>()`的模板参数难以确定（？）**
+
+```c++
+void Print3(int a, int b, int c)
+{
+    cout << a << b << c << endl;
+}
+void Print2(int a, int b)
+{
+    cout << a << b << endl;
+}
+
+int main()
+{
+    function<void(int, int)> F1 = bind(&Print3, placeholders::_1, placeholders::_2, 0);
+    auto p1 = F1.target<void(*)(int, int)>();   //这里的模板参数是错误的，因此返回nullptr
+    function<void(int, int)> F2 = Print2;
+    auto p2 = F2.target<void(*)(int, int)>();
+
+    cout << p1 << endl;   //nullptr
+    cout << (F1.target_type() == F2.target_type()) << endl;   //0
+    cout << F1.target_type().name() << endl;    //class std::_Binder<struct std::_Unforced,void (__cdecl*)(int,int,int),struct std::_Ph<1> const & __ptr64,struct std::_Ph<1> const & __ptr64,int>
+    cout << F2.target_type().name() << endl;    //void (__cdecl*)(int,int)
     return 0;
 }
 ```
