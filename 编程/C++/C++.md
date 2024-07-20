@@ -1007,6 +1007,7 @@ int main()
 ## 函数指针
 
 - 除了直接调用，函数只能以指针的形式存在（一般情况下，函数的取地址符可省略）
+- 如果两个函数的参数列表和具体实现完全相同，可能会被优化成同一个函数，具有相同的地址
 
 ```c++
 int Func(int a)
@@ -1039,7 +1040,7 @@ public:
 int main()
 {
     Comparer c;
-    auto F = Comparer::Compare;		//F与特定类实例无关(无法用于区分来自不同实例的同一成员方法)
+    auto F = &Comparer::Compare;	//F与特定类实例无关(无法用于区分来自不同实例的同一成员方法)
     cout << (c.*F)(1, 0) << endl;
     return 0;
 }
