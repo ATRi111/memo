@@ -28,7 +28,9 @@
   3. 链接**静态链接库**，每个编译单元经C++**编译器**生成一个**目标程序**
   4. 所有目标程序经**链接器**生成一个**可执行程序**（编译完毕后才可能访问**动态链接库**）
 
-## 项目结构
+## Visual Studio项目结构
+
+- Visual Studio编辑器及其项目文件仅能在Windows平台运行；如果不使用任何第三方插件，仅能构建运行于Windows平台的程序
 
 ### 解决方案与项目
 
@@ -140,8 +142,9 @@
   - 对于使用的外部对象，需要将其一一声明。可以将声明（或定义）写在头文件中，然后调用#include指令
 - 引用头文件，本质上是将头文件的内容复制进来
 - **头文件之间，不可以相互包含、循环包含，必须确保依赖关系是单向的**（`#pragma once`仅能防止一个文件多次包含某头文件）
+  - 如果一个头文件中的类相互依赖，则可以在该头文件中使用**前向声明**
   - 如果两个头文件中的类相互依赖，则可以在一个头文件中使用**前向声明**，然后不再包含另一个头文件
-  - **前向声明**仅用于头文件中，源文件中依然可以且必须包含需要的头文件，因为前向声明并不包含具体实现
+  - 源文件中通常不需要使用前向声明（因为依赖的对象通常包含在头文件中）
 
 ```C++
 //Test.cpp
@@ -200,9 +203,8 @@ void Library::LogA() const
 ## 内联
 
 - **内联发生在编译阶段，因此需要内联的函数必须存在于源代码中**
-  - **对于inline修饰的函数，其声明与定义通常放在一个文件中，否则可能造成编译错误**
-  - **内联函数的定义通常直接包含在头文件中（头文件中声明与定义重合的函数默认内联）**
-  - **静态链接库和动态连接库的链接均发生在内联之后，因此其中的函数不可能被内联（？）**
+  - **通常，头文件中的函数均需要以inline修饰（头文件中声明与定义重合的函数默认以inline修饰）**
+  - **通常，源文件中的函数均不能以inline修饰（除非仅在本文件内部使用）**
   
 - **inline只是一种建议，由inline修饰且确实能够内联的函数才会内联**
   - 带有递归、分支、循环的函数可能无法内联，虚函数通常无法内联
@@ -881,7 +883,7 @@ int main()
 
 - **如果赋值号左侧是尚未构造的对象，那么等号必然会调用某种构造函数，否则调用赋值运算符**
 - **赋值运算符必须人为定义，可能需要定义多个不同参数的重载**
-  - 未定义则不可使用等号运算符，这时该类实例具有**“不变性”**（见下表）
+  - 未定义则不可使用等号运算符，这时该类实例具有**“不变性”**（见以下代码）
   - 最常见的以**常数引用**为参数，与拷贝构造函数共同发挥作用
   - 以**右值引用**为参数的等号运算符也被称为**移动赋值运算符**（见移动构造函数）
 
@@ -1004,6 +1006,11 @@ int main()
 }
 ```
 
+### ==
+
+- 要比较两个自定义类型的**实例**是否相等，要将==运算符的重载定义为**成员函数**（如果是非成员函数的运算符重载，不能两个参数都是自定义类型）
+- 要比较两个自定义类型的**指针**是否相等（比较其具体内容，乃至多态相关的问题），不能通过重载该类型的==运算符；对两个指针使用==运算符始终意味着比较地址是否相等
+
 ## 函数指针
 
 - 除了直接调用，函数只能以指针的形式存在（一般情况下，函数的取地址符可省略）
@@ -1040,8 +1047,8 @@ public:
 int main()
 {
     Comparer c;
-    auto F = &Comparer::Compare;	//F与特定类实例无关(无法用于区分来自不同实例的同一成员方法)
-    cout << (c.*F)(1, 0) << endl;
+    auto F = &Comparer::Compare;	//bool(Comparer::*F)(int, int) = &Comparer::Compare;
+    cout << (c.*F)(1, 0) << endl;	//F与无法用于区分来自不同实例的同一成员方法
     return 0;
 }
 ```
@@ -1086,7 +1093,7 @@ int main()
   - **类析构时自动释放**
 
 - 如果将成员变量定义为**指针**：
-  - **若在类内部分配地址，一般必须在类析构时回收**
+  - **若在类内部分配地址，一般必须在类析构时回收（注意避免接收外部传入的地址）**
   - **若来源为外部地址，可以深拷贝，析构时释放目的地址，源地址在外部人为释放（效率低但通用的做法）**
   - **若来源为外部堆地址，可以浅拷贝，可以选择析构时释放或由外部释放（效率高，必须向外部说明，必须避免传入栈地址）**
   - **若来源为外部栈地址，可以浅拷贝，等外部自动释放（效率高，必须确保使用时外部尚未释放该成员的空间）**
@@ -1409,10 +1416,14 @@ public:
 };
 ```
 
-#### 多态
+### 多态
 
-- **如果要正确地实现多态，需要实现多态的类必须始终使用指针传递**
-- C++中，需要实现多态的父类必须有**至少一个虚函数**（否则多态无意义）
+- **如果将某个变量定义为类实例，就一定表示那个类本身，而不是其派生类的实例**
+  - **不能定义包含纯虚函数的类实例**
+
+- **而某个类的指针可以指向其派生类的实例，因此要实现多态必须使用指针**
+  - 需要实现多态的父类必须有**至少一个虚函数**（否则多态无意义）
+
 
 ```C++
 class Parent
@@ -1536,11 +1547,12 @@ int main()
 ## 模板
 
 - 模板比泛型的功能更强大，且限制更宽松（编译前不检查语义上的错误，编译时才会发现），模板中的“T”称为”模板参数“
-- **模板参数不仅可以表示单个未确定的类型（以typename修饰），还可以表示若干个未确定的类型（以typename...修饰），及未确定的值（以具体变量类型名修饰）**
+- **模板参数不仅可以表示单个未确定的类型（以typename修饰），还可以表示若干个未确定的类型（模板参数列表），及未确定的值（以具体变量类型名修饰）**
 - 模板本质上是**编译时执行的自动代码生成手段**；定义模板函数后，只有以具体模板参数调用了该函数，编译后才包含对应版本的函数
 
 ### 模板函数
 
+- **模板函数的定义一般位于头文件中**（如果位于源文件中，编译器无法自动确定需要编译哪些版本的模板函数）
 - 模板参数用于函数内部
 - 模板函数可以与非模板版本同时存在，调用函数时优先选择非模板版本
 - 需要访问模板类实例时且无法确定某模板参数时，使用模板方法
@@ -1579,34 +1591,91 @@ int main()
 }
 ```
 
+- 模板类中还可能包含模板类和模板参数，即模板嵌套
+
 ```c++
-template<typename R, typename... Args >	//模板参数列表
-class Function
+template<typename I, typename TResult, typename ... Args>
+class MemberFunc;
+
+template<typename TResult,typename ... Args>
+class IFunc
 {
 public:
-	R(*Func)(Args...);		//Func为函数指针类型的实例
-	Function(R(*F)(Args...))//F为函数指针类型的参数
+	template<typename I_, typename TResult_, typename ... Args_>
+	bool Equal(const MemberFunc<I_, TResult_, Args_...>& other);
+};
+
+template<typename I, typename TResult,typename ... Args>
+class MemberFunc :public IFunc<TResult, Args...>
+{
+	TResult(I::*F)(Args...);
+	I* instancePtr;
+public:
+	bool operator==(const MemberFunc<I, TResult, Args...>& other)
 	{
-		Func = F;
+		return F == other.F && instancePtr == other.instancePtr;
 	}
 };
 
-int Transform(float f)
+template<typename TResult, typename ... Args>
+template<typename I_, typename TResult_, typename ... Args_>
+bool IFunc<TResult, Args...>::Equal(const MemberFunc<I_, TResult_, Args_...>& other)
 {
-	return (int)f;
-}
-
-int main()
-{
-	Function<int,float> F1 = Transform;
+    MemberFunc<I_, TResult_, Args_...>* p = dynamic_cast<MemberFunc<I_, TResult_, Args_...>*> (this);
+    if (p)
+        return p->operator==(other);
+    return false;
 }
 ```
 
-### 模板using指令
+- 定义模板类实例时，如果还不能具体确定模板参数，则必须使用`typename`修饰
+
+```c++
+template<typename TResult, typename ... Args>
+class Func : public Delegate
+{
+	std::list<IFunc<TResult, Args...>*> funcs;
+public:
+	void Test()
+	{
+		typename std::list<IFunc<TResult, Args...>*>::iterator it;	//无法确定具体模板参数
+		for (it = funcs.begin(); it != funcs.end(); it++);
+	}
+};
+```
+
+- 利用using指令可以给模板类取别名
 
 ```c++
 template<typename T>
-using Ref = std::shared_ptr<T>;	//给模板类取别名
+using Ref = std::shared_ptr<T>;
+
+Ref<int> a;
+```
+
+### enable_if
+
+- 用于**仅在符合条件时定义模板函数**
+- `typename std::enable_if<A, B>::type`：当模板参数A的值为true时，这段语句表示B这个类型；当模板A的值为false时，包含这段语句的函数不编译
+
+```c++
+template<typename R>
+class Function
+{
+private:
+	std::function<R> f;
+public:
+    //R不为void时,返回f()
+	typename std::enable_if<!std::is_same<R, void>::value, R>::type Invoke() 
+	{
+		return f();
+	}
+    //R为void时,不返回
+	typename std::enable_if<std::is_same<R, void>::value, void>::type Invoke() 
+	{
+		f();
+	}
+};
 ```
 
 # API
@@ -1681,6 +1750,11 @@ int main()
 ### array
 
 - 大小固定且类型可变（利用模板参数），分配在栈上的数组
+
+### list
+
+- 存放同种类型元素的链表
+- 支持在头部/尾部删除/添加元素
 
 ### vector
 
