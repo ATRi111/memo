@@ -331,12 +331,29 @@ int main() {
 
 ### for
 
-- **for兼具C#中foreach的作用（通常应使用指针或引用，否则会将对象拷贝多次）**
+- **for兼具C#中foreach的作用**
+- **如果容器中的元素为类实例，通常在foreach循环中使用引用以避免拷贝（一般的for循环通常就是按地址访问）**
 
 ```c++
-foreach(Vertex& v:vertices)
+for(Vertex& v:vertices)
 {
 	cout << v << endl;
+}
+```
+
+- **foreach循环中，不能增删容器元素；for循环中，必须考虑增删元素对循环的影响**
+
+```c++
+void Invoke(Args... args)
+{
+	typename std::list<IAction<Args...>*>::iterator it;
+	for (it = actions.begin(); it != actions.end(); )
+	{
+		IAction<Args...>* p = *it;
+		it++;	//调用p->Invoke时,p有可能将自身从actions中移除,可以提前令迭代器+1,避免访问被释放的内存
+        //此做法无法防止p之后的元素被移除
+		p->Invoke(args...);
+	}
 }
 ```
 
@@ -1563,7 +1580,7 @@ int main()
 
 ### 模板函数
 
-- **模板函数的定义一般位于头文件中**（如果位于源文件中，编译器无法自动确定需要编译哪些版本的模板函数）
+- **模板函数（及模板类中的函数）的定义一般位于头文件中**（如果位于源文件中，编译器无法自动确定需要编译哪些版本的模板函数）
 - 模板参数用于函数内部
 - 模板函数可以与非模板版本同时存在，调用函数时优先选择非模板版本
 - 需要访问模板类实例时且无法确定某模板参数时，使用模板方法
@@ -1664,10 +1681,35 @@ using Ref = std::shared_ptr<T>;
 Ref<int> a;
 ```
 
+- 如果父类为模板参数不确定的模板类，访问父类成员时必须使用this->，否则编译器无法正确编译
+
+```c++
+template<typename TValue, typename TLerp>
+class Circulation : public Timer<TValue, TLerp>
+{
+protected:
+	virtual void AfterComplete_(TValue _)
+	{
+		TValue temp = this->target;
+		this->target = this->origin;
+		this->origin = temp;
+		this->Restart();
+	}
+};
+```
+
+### is_same
+
+- `std::is_same<A,B>::value`：A与B相同时，此表达式返回true，否则返回false
+
+### is_base_of
+
+- `std::is_base_of<A,B>::value`：A是B的基类，或A与B是同一个类时，此表达式返回true，否则返回false
+
 ### enable_if
 
-- 用于**仅在符合条件时定义模板函数**
-- `typename std::enable_if<A, B>::type`：当模板参数A的值为true时，这段语句表示B这个类型；当模板A的值为false时，包含这段语句的函数不编译
+- 用于**仅在符合条件时定义模板函数（使用不符合条件的模板参数则编译时报错）**
+- `typename std::enable_if<A, B>::type`：当模板参数A的值为true时，此表达式表示B这个类型；当模板A的值为false时，包含此表达式的模板函数/类不编译
 
 ```c++
 template<typename R>
@@ -1686,6 +1728,15 @@ public:
 	{
 		f();
 	}
+};
+```
+
+```c++
+template<typename TValue,typename TLerp, 	//TLerp必须实现ILerp<TValue>
+	typename = typename std::enable_if<std::is_base_of<ILerp<TValue>, TLerp>::value>::type>
+class BaseTimer
+{
+
 };
 ```
 
@@ -1757,6 +1808,11 @@ int main()
 ## 数据结构
 
 - **各类容器作为参数传递时，大部分情况下传引用（传实例则发生深拷贝）**
+- **各类容器的元素分配在堆上，容器析构时自动释放**
+  - **如果元素是指针，仅指针本身分配在堆上，仅释放指针本身（注意内存泄漏问题）**
+  - **元素不能定义为引用**
+  - **如果元素是实例，访问元素时考虑使用引用来避免拷贝**
+
 
 ### array
 
@@ -1859,7 +1915,7 @@ int main()
 - **通过散列实现**
   - **使用拉链法避免冲突**
   - **元素是无序的**
-  - **存放自定义类型时，必须确保该类型重载了==，并在头文件中为该类型定义了hash模板结构体**
+  - **存放自定义类型时，必须确保该类型重载了==，并在头文件中为该类型定义了hash模板结构体(unordered_map只需要key满足这些条件)**
   - **插入、删除的时间复杂度近似为O(log 1)**
 
 ```c++
@@ -1873,6 +1929,19 @@ namespace std	//表示在以下代码段省略std,不是表示以下代码段仅
 			return hash<float>()(v.x) ^ hash<float>()((v.y)) ^ hash<float>()((v.z));	//用异或运算计算哈希值
 		}
 	};
+}
+```
+
+```c++
+std::unordered_map<EInvokeTiming, Action<>> cycle;	//枚举等内置类型不需要人为定义hash
+std::unordered_map<EInvokeTiming, Action<>> temp;
+void Update()
+{
+	for (auto& pair : temp)				//使用引用避免拷贝
+	{
+		cycle.insert(std::move(pair));	//使用move避免拷贝
+	}
+	temp.clear();
 }
 ```
 
@@ -2101,7 +2170,7 @@ int main()
   - 运行态：正在运行
   - 阻塞态：不满足运行条件，暂停运行；等待的事件发生后，转为就绪态
   - 可连接态：运行完毕，资源尚未释放
-  - 终止态：资源已释放，线程本身的声明周期尚未结束
+  - 终止态：资源已释放，线程本身的生命周期尚未结束
 
 ### thread
 
