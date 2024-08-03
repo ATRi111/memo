@@ -226,7 +226,6 @@ void Library::LogA() const
 
 - `#define,#ifdef,#endif`等指令，作用于预处理阶段
 - 一条宏定义的生效范围为**一个编译单元（即一个头文件）**；因此**`#if`，`#ifdef`类指令通常定义在头文件中，使各个源文件共享，而`#define`等指令通常定义在源文件中，表示各个源文件的不同设置**
-- **宏必须谨慎使用，避免带来理解困难**
 - 定义宏时，如果要表示换行，使用`\`
 - 常见用途：
   - **类似枚举常量的作用**
@@ -248,7 +247,7 @@ void Library::LogA() const
 #define EVENT_CLASS_TYPE(type) static EventType GetStaticType() { return EventType::type; }\
 								virtual EventType GetEventType() const override { return GetStaticType(); }\
 								virtual const char* GetName() const override { return #type; }
-//#type表示,编译时,将"#type"替换成type这一宏参数实际表示的字符串
+//#type表示,预处理时,将"#type"替换成type这一宏参数实际表示的字符串
 ```
 
 ![image-20240617162255283](Image/image-20240617162255283.png)
@@ -293,6 +292,24 @@ int main()
 - 自动确定的变量类型
 - **auto一定不会自动确定成引用（但可以自动确定成指针），必要时在auto后加上引用符号**
 - 有利于减少代码修改，但同时影响可读性、可靠性；适用于代替名称过长的类型名
+
+### extern
+
+- **修饰函数或变量**，表示该对象既不存在于本文件中，也不存在于引用的头文件中
+  - 预处理时，对于extern对象，编译器会忽略其没有声明/定义的问题
+  - 链接时，编译器会在所有被链接在一起的文件中查找该extern对象
+
+```c++
+//用户应当定义此方法,本文件不需要也不可能去引用用户的头文件
+extern Application* CreateApplication();
+
+int main(int argc, char** argv)
+{
+	auto app = CreateApplication();
+	app->Run();
+	delete app;
+}
+```
 
 ### decltype
 
@@ -378,7 +395,6 @@ void Invoke(Args... args)
 - **变量定义：规定变量的类型和名称，并为某个变量分配内存（是否分配内存，是区分声明和定义的唯一标准）**
   - **初始化：为变量分配内存并设定初始值（定义是初始化的一部分）**
   - **声明时初始化：声明语句和初始化语句重合**
-  - 声明时定义：假设声明时仅定义而没有初始化是可能的，那么，该语句与声明语句没有区别，实际上也不会在声明时自动定义，所以这种说法不成立
 - **每个翻译单元**必须各自包含要使用的变量**声明**，但变量**定义**在所有**相互链接的目标文件**中只能出现一次（当然，**赋值**可以出现多次）
   - **如果变量只有声明而没有定义，并且确实试图访问该变量，链接时会产生错误（某些类型的变量能够自动隐式初始化，便不会出现这种情况）**
 
@@ -1832,6 +1848,21 @@ int main()
 ### array
 
 - 大小固定且类型可变（利用模板参数），分配在栈上的数组
+
+### iterator
+
+- 有**类似于指向容器元素的指针**的功能和语法，但不能转换为容器元素指针
+- 能够执行自增、自减、加法、减法
+
+```c++
+int index = 0;
+auto it = collection.begin();
+while((it+index)! = collection.end())	//使用加法有时能避免容器元素变动导致的bug,但开销高于直接自增迭代器
+{
+    //可能会修改容器元素
+	index++;   
+}
+```
 
 ### list
 
