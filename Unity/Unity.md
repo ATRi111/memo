@@ -146,7 +146,7 @@ MP3：适用于非循环音频，也适用于某些特殊平台
 
 ### 开始
 
-![屏幕截图 2022-02-22 234651](D:\work\Unity\屏幕截图 2022-02-22 234651.jpg)
+<img src="屏幕截图 2022-02-22 234651.jpg" alt="屏幕截图 2022-02-22 234651" style="zoom:80%;" />
 
 将脚本挂载到游戏物体上时，会调用Reset方法，但此时脚本尚未被实例化。游戏开始时，脚本实例化，实例化顺序可以在**Edit > Project Settings->Script Execution Order**中修改，也可以用`[DefaultExecutionOrder(xxx)]`修改。
 
@@ -154,7 +154,7 @@ MP3：适用于非循环音频，也适用于某些特殊平台
 
 ### 帧
 
-![屏幕截图 2022-02-22 234927](D:\work\Unity\屏幕截图 2022-02-22 234927.jpg)
+<img src="屏幕截图 2022-02-22 234927.jpg" alt="屏幕截图 2022-02-22 234927" style="zoom: 80%;" />
 
 Update和LateUpdate之间，yield null的协程执行；到时间的yield WaitForSeconds的协程执行。LateUpdate之后，yield WaitForEndOfFrame的协程执行。
 
@@ -162,7 +162,7 @@ Update和LateUpdate之间，yield null的协程执行；到时间的yield WaitFo
 
 ### 物理和动画
 
-![屏幕截图 2022-02-22 235613](D:\work\Unity\屏幕截图 2022-02-22 235613.jpg)
+<img src="屏幕截图 2022-02-22 235012.jpg" alt="屏幕截图 2022-02-22 235012" style="zoom:80%;" />
 
 物理状态更新处于FixedUpdate之后，穿插在动画更新之间。物理、动画相关的方法每固定帧执行一次。
 
@@ -174,7 +174,7 @@ OnGUI执行的频率是帧频的数倍
 
 ### 结束
 
-![image-20220222235436680](D:\work\Unity\image-20220222235436680.png)
+<img src="屏幕截图 2022-02-22 235613.jpg" alt="屏幕截图 2022-02-22 235613" style="zoom:80%;" />
 
 退出应用程序或退出play mode时，会调用OnApplicationQuit和OnDestroy。人为Destroy时，也会调用OnDestroy。但无论如何，只有**游戏对象处于激活状态**时，才可能调用OnDestroy。
 
