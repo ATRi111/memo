@@ -1762,15 +1762,6 @@ public:
 };
 ```
 
-```c++
-template<typename TValue,typename TLerp, 	//TLerp必须实现ILerp<TValue>
-	typename = typename std::enable_if<std::is_base_of<ILerp<TValue>, TLerp>::value>::type>
-class BaseTimer
-{
-
-};
-```
-
 # API
 
 ## 通用
