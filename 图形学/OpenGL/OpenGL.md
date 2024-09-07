@@ -7,61 +7,107 @@
 ### 上下文
 
 - OpenGL程序是一种“状态机”，要实现一个功能，通常需要先设置好一系列的参数（Context），而不是单纯地调用一个API
-- **上下文(Context)**：**当前**渲染所需的数据和渲染设置等
+- **上下文(Context)**：持有**当前**渲染所需的VBO、VAO、渲染程序等对象
 - 将某个对象**绑定**到上下文意味着接下来此对象将被用作渲染数据（直到**解除绑定**）
 
-### VBO
+### 缓冲
 
 ![VAO与VBO](VAO与VBO.png)
 
-- **顶点缓冲区对象(VBO)**：（GPU内存中）一个数组，每个元素对应一个顶点，包含**单个顶点的所有属性（的具体值）**
+- **缓冲：**OpenGL中有多种**不同类型**的缓冲，对于每种类型的缓冲，同一时刻只能有一个该类型的缓冲绑定到上下文
   
-- **顶点数组对象(VAO)**：（GPU内存中的）一个数组每个元素对应一个属性，包含**描述每个属性信息的数据（编号，数据类型，分量数目，偏移量等）**
+- **顶点缓冲对象(VBO)**：（GPU内存中）一个数组，每个元素对应一个顶点，包含**单个顶点的所有属性（的具体值）**
+  
+- **顶点数组对象(VAO)**：（GPU内存中的）一个数组每个元素对应一个属性，包含**描述每个属性信息的数据（索引号，数据类型，分量数目，偏移量等）**
 
 ## API
 
+### Buffer
+
+- `glGenBuffers`并不是用于生成一切类型的缓冲的函数，只能生成VBO、IBO等类型的缓冲
+
 ```C++
-glClear(GLbitfield mask):清除上下文中指定类型的缓冲区
-    mask:缓冲区类型编码(可以用按位或连接,以清除多个缓冲区)
-        
-glGenBuffers(int count,int* ret):生成若干个缓冲区(即VBO)
-	count:数量
-    ret:接收结果(ret会被视为数组首地址,其中存放生成的所有缓冲区的标识符)
+void glGenBuffers( 		//生成若干个缓冲区
+    GLsizei n,
+	GLuint * buffers);	//接受结果的首地址
 
-glBindBuffer(int target,int buffer):将指定缓冲区绑定到上下文
-    target:缓冲区类型
-    buffer:缓冲区的标识符(0表示将绑定到上下文的指定类型的缓冲区解除)
+void glBindBuffer( 	//将指定缓冲区绑定到上下文
+    GLenum target,	//缓冲区类型
+	GLuint buffer);	//缓冲区的标识符(0表示将绑定到上下文的指定类型的缓冲区解除)
 
-glBufferData(int target,int size,void* data,int usage):把一块数据复制到当前绑定的缓冲区
-    target:缓冲区类型
-    size:缓冲区大小
-    data:数据首地址
-    usage:用途编码
+void glBufferData(			//将一块数据复制到上下文指定类型的缓冲区中
+    GLenum target,			//缓冲区类型
+	GLsizeiptr size,		//数据大小
+	const GLvoid * data,	//数据起始地址
+	GLenum usage);			//数据用途和修改模式
+```
 
-glGenVertexArrays(int count,int* ret):生成若干个顶点数组
-    count:数量
-    ret:接收结果(ret会被视为数组首地址,其中存放生成的所有顶点数组的标识符)
+### VAO
 
-glBindVertexArray(int array):将指定顶点数组绑定到当前上下文
-    array:顶点数组的标识符(0表示将绑定到上下文的顶点数组解除)
+- 如果不人为创建VAO，会使用**默认VAO（索引号为0）**
+- 渲染程序根据上下文中VAO中的数据，确定VBO中各个属性的布局
+- VBO中，只有被**启用**的属性，才会被传递给着色器。本质上是在修改上下文中当前的VAO，绑定其他VAO后需要重新启用
 
-glVertexAttribPointer(int index, int count, int type, int normalized, int stride, void* offset):
-指明上下文缓冲区中某种属性的布局(本质上是在修改VAO)
-	index:顶点属性编号(与顶点着色器代码有关,如默认顶点着色器会把编号为0的属性当作位置)
-    count:该属性的分量数目(例如,位置、颜色通常有三个分量)
-    type:该属性各分量的变量类型		//GL_FLOAT GL_INT GL_UNSIGNED_BYTE
-    normalized:是否自动对该属性执行标准化
-    stride:一个此属性到下一个此属性的间距(通常总是等于单个顶点占用的空间,否则可能有特殊用途)
-    offset:任意顶点的该属性相对于该顶点初始地址的偏移量(需要强转为void*)
-	        
-glEnableVertexAttribArray(int index):启用指定编号的顶点属性
-    index:顶点属性编号
+```c++
+void glGenVertexArrays(	//生成若干个顶点数组
+    GLsizei n,
+	GLuint *arrays);	//接受结果的首地址
 
-glShaderSource(int index,int count,char* string,int length):设定着色器的源代码
-    index:着色器的标识符
-    count:源代码的段数(字符串可以分多段)
-    string:源代码字符串首地址
-    length:字符串长度(如果设为NULL,自动根据字符串中的结束符确定长度)
+void glBindVertexArray( //将指定VAO绑定到上下文
+    GLuint array);		//顶点数组的标识符(0表示切换到默认VAO)
+
+void glEnableVertexAttribArray( //启用上下文中VBO的某个属性
+    GLuint index);
+
+void glDisableVertexAttribArray( //禁用上下文中VBO的某个属性
+    GLuint index);
+
+void glVertexAttribPointer( //指明VBO中某个属性的布局
+    GLuint index,			//属性索引号(与顶点着色器代码有关,如默认顶点着色器会把索引号为0的属性当作位置)
+	GLint size,				//该属性的分量数目(例如,位置、颜色通常有三个分量)
+	GLenum type,			//该属性分量的变量类型
+	GLboolean normalized,	//是否自动对该属性执行标准化
+	GLsizei stride,			//某一个此属性到下一个此属性的间距(通常总是等于单个顶点占用的空间,否则可能有特殊用途)
+	const GLvoid* pointer);	//任意顶点的该属性相对于该顶点初始地址的偏移量(需要强转为void*)
+```
+
+### ShaderProgram
+
+- 一个**着色器程序**由若干个**着色器连接**而成
+- 一个着色器绑定到着色器程序后，如果不再需要绑定到其他着色器程序，便可以删除
+
+```c++
+GLuint glCreateProgram();//创建着色器程序,返回索引号
+
+void glUseProgram( 	//将指定着色器程序绑定到上下文
+    GLuint program);
+
+
+GLuint glCreateShader( 	//创建着色器,返回索引号
+    GLenum shaderType);	//着色器类型
+
+void glShaderSource( 		//设置指定着色器的源码
+    GLuint shader,			
+	GLsizei count,			//源代码的字符串段数
+	const GLchar**string,	//数组首地址,数组元素为各个字符串的起始地址
+	const GLint *length);	//数组首地址,数组元素为各个字符串的长度(若为nullptr,根据结束符自动确定字符串长度)
+
+void glCompileShader(	//编译指定着色器 	
+    GLuint shader);
+
+void glAttachShader( //将指定着色器绑定到指定着色器程序
+    GLuint program,
+	GLuint shader);
+
+void glLinkProgram( //将绑定到指定着色器程序的所有着色器连接,生成完整的着色器程序
+    GLuint program);
+```
+
+### Others
+
+```c++
+void glClear(			//清除上下文指定类型缓冲区的内容
+    GLbitfield mask);	//缓冲区掩码(可用或运算连接)
 ```
 
 # GLFW
