@@ -236,20 +236,20 @@ Unity中的可序列化分两种情况，一种是修改Inspector下的字段时
 
 - Editor模式下不能修改运行时数据，只能修改**UnityEngine.Object及其子类中可序列化的数据**
 
-## 在Inspector中修改
+## Inspector中的数据
 
-- 通过serializedObject.FindProperty获取
-- 通过SerializedProperty修改
-- 通过serializedObject.Update更新
-- 通过serializedObject.ApplyModifiedProperties保存
+- 通过`serializedObject.FindProperty`获取
+- 通过`SerializedProperty`修改
+- 通过`serializedObject.Update`更新
+- 通过`serializedObject.ApplyModifiedProperties`保存
 
-## 在非Inspector中修改
+## Inspector外的数据
 
-- 通过ScriptableObject.CreateInstance创建对象（也可以使用AssetDataBase中的API，下同），然后通过AssetDatabase.CreateAsset生成Asset，然后刷新
+- 通过`ScriptableObject.CreateInstance`创建对象（也可以使用AssetDataBase中的API，下同），然后通过`AssetDatabase.CreateAsset`生成Asset，然后刷新
 - 通过资源加载的方式获取
 - 直接修改资源，然后将资源设为Dirty，然后按保存键或主动调用保存，然后刷新
 
-## 修改Prefab
+## Prefab
 
 - 通过资源加载的方式获取
 

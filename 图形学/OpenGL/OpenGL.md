@@ -16,9 +16,11 @@
 
 - **缓冲：**OpenGL中有多种**不同类型**的缓冲，对于每种类型的缓冲，同一时刻只能有一个该类型的缓冲绑定到上下文
   
-- **顶点缓冲对象(VBO)**：（GPU内存中）一个数组，每个元素对应一个顶点，包含**单个顶点的所有属性（的具体值）**
+- **顶点缓冲对象(VBO)**：（GPU内存中的）一个数组，每个元素对应一个顶点，包含**单个顶点的所有属性（的具体值）**
   
 - **顶点数组对象(VAO)**：（GPU内存中的）一个数组每个元素对应一个属性，包含**描述每个属性信息的数据（索引号，数据类型，分量数目，偏移量等）**
+
+- **索引缓冲区对象(IBO)：**（GPU内存中的）一个数组，每个元素为顶点索引，每三个元素一组，表示构成一个三角形的顶点顺序
 
 ## API
 
@@ -39,7 +41,7 @@ void glBufferData(			//将一块数据复制到上下文指定类型的缓冲区
     GLenum target,			//缓冲区类型
 	GLsizeiptr size,		//数据大小
 	const GLvoid * data,	//数据起始地址
-	GLenum usage);			//数据用途和修改模式
+	GLenum usage);			//访问数据的模式
 ```
 
 ### VAO
@@ -68,7 +70,7 @@ void glVertexAttribPointer( //指明VBO中某个属性的布局
 	GLenum type,			//该属性分量的变量类型
 	GLboolean normalized,	//是否自动对该属性执行标准化
 	GLsizei stride,			//某一个此属性到下一个此属性的间距(通常总是等于单个顶点占用的空间,否则可能有特殊用途)
-	const GLvoid* pointer);	//任意顶点的该属性相对于该顶点初始地址的偏移量(需要强转为void*)
+	const GLvoid* pointer);	//第一个该属性的地址(如果已有VBO绑定,含义变为第一个该属性的地址相对于已绑定VBO首地址的偏移量)
 ```
 
 ### ShaderProgram
@@ -102,6 +104,23 @@ void glAttachShader( //将指定着色器绑定到指定着色器程序
 void glLinkProgram( //将绑定到指定着色器程序的所有着色器连接,生成完整的着色器程序
     GLuint program);
 ```
+
+### Draw
+
+```c++
+void glDrawArrays( 	//按照数组中的数据绘制图形(不人为给出IBO)
+	GLenum mode,	//绘制模式,本质上是规定如何自动确定顶点索引顺序
+	GLint first,	//从数组的第几个元素开始绘制
+	GLsizei count);	//索引总数
+
+void glDrawElements( 		//根据IBO绘制图形
+    GLenum mode,			//绘制模式,本质上是规定如何使用IBO
+	GLsizei count,			//索引总数
+	GLenum type,			//IBO的元素类型
+	const GLvoid * indices);//IBO的地址(如果已有IBO绑定,含义变为相对于已绑定IBO首地址的偏移量)
+```
+
+
 
 ### Others
 
