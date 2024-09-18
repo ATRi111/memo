@@ -61,17 +61,17 @@
 [3]：`glCopyBufferData`实现缓冲区数据的复制，如果需要临时存放数据，可以使用`GL_COPY_READ_BUFFER`和`GL_COPY_WRITE_BUFFER`
 
 ```C++
-void glGenBuffers( 		//生成若干个缓冲区
+void glGenBuffers( 		//为若干个缓冲区分配id
     GLsizei n,
 	GLuint * buffers);	//接受结果的首地址
 
-void glBindBuffer( 	//将指定缓冲区绑定到上下文
+void glBindBuffer( 	//将指定缓冲区id绑定到上下文
     GLenum target,	//缓冲区类型
-	GLuint buffer);	//缓冲区的标识符(0表示解除当前绑定)
+	GLuint buffer);	//id(0表示解除当前绑定)
 
-void glBufferData(			//将一块数据复制到上下文指定类型的缓冲区中
+void glBufferData(			//为上下文指定类型的缓冲区分配显存,并复制数据
     GLenum target,			//缓冲区类型
-	GLsizeiptr size,		//数据大小
+	GLsizeiptr size,		//缓冲区大小
 	const GLvoid * data,	//数据起始地址
 	GLenum usage);			//访问数据的模式
 ```
@@ -148,6 +148,23 @@ void glDrawElements( 		//根据IBO绘制图形
 	GLsizei count,			//索引总数
 	GLenum type,			//IBO的元素类型
 	const GLvoid * indices);//IBO的地址(如果已有IBO绑定,含义变为相对于已绑定IBO首地址的偏移量)
+```
+
+### Query
+
+- `glBeginQuery`和`glEndQuery`总是成对使用（类似`#if`和`#end if`的配对方式）
+
+```c++
+void glGenQueries( 	//生成若干个缓冲区存放查询结果
+    GLsizei n,
+	GLuint * ids);
+
+void glBeginQuery( 	//为指定id分配显存，存放查询结果
+    GLenum target,	//要查询的项目
+	GLuint id);		
+
+void glEndQuery( 	//结束查询，写入结果
+    GLenum target);
 ```
 
 ### Others
