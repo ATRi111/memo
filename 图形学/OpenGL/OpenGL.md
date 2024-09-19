@@ -33,8 +33,8 @@
 #### uniform变量
 
 - 在着色器代码中以`uniform`前缀修饰的变量
+- 生命周期（持有者）是整个**着色器程序**（在整个着色器程序中有独一无二的location），可避免给多个着色器传递重复数据；在各个着色器代码中**禁止修改**
 - 可通过`glGetUniformLocation`，`glUniform1f`等API便捷地访问shader中的数据，是定义**外部可调参数**的通用做法
-- 生命周期（持有者）是整个**着色器程序**，可避免给多个着色器传递重复数据；在整个着色器程序中**禁止修改**
 
 ## API
 
@@ -133,6 +133,14 @@ void glAttachShader( //将指定着色器绑定到指定着色器程序
 
 void glLinkProgram( //将绑定到指定着色器程序的所有着色器连接,生成完整的着色器程序
     GLuint program);
+
+GLint glGetUniformLocation( //获取指定着色器程序中的uniform变量
+    GLuint program,
+	const GLchar *name);
+
+void glUniform1f( 	//修改当前上下文中,指定location对应的uniform变量的值
+    GLint location,
+	GLfloat v0);
 ```
 
 ### Draw

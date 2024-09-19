@@ -2044,6 +2044,19 @@ void Update()
 }
 ```
 
+```c++
+int GetUniformLocation(const char* name) const
+{
+    auto it = locaionCache.find(name);
+    if (it != locaionCache.end())
+    {
+        return it->second;
+    }
+    int location = glGetUniformLocation(id, "u_Color");
+    return glGetUniformLocation(id, "u_Color");
+}
+```
+
 ## 智能指针
 
 - **智能指针本质上是包含指针的模板类，其本身不是指针**
