@@ -6,7 +6,7 @@
 
 ### 上下文
 
-- OpenGL程序是一种“状态机”，要实现一个功能，通常需要先设置好一系列的参数（Context），而不是单纯地调用一个API
+- OpenGL程序是一个状态机，要实现一个功能，通常需要先设置好**上下文(Context)**中一系列的参数，而不是单纯地调用一个API
 - **上下文(Context)**：持有**当前**渲染所需的VBO、VAO、渲染程序等对象
 - 将某个对象**绑定**到上下文意味着接下来此对象将被用作渲染数据（直到**解除绑定**）
 
@@ -16,8 +16,8 @@
 
 - **缓冲区：**OpenGL中有多种**不同类型**的缓冲区，对于每种类型的缓冲区，同一时刻只能有一个绑定到上下文
 - **顶点数组对象(VAO)**：**显存**中的一个区域，持有指向某个VBO中各个属性的指针，及描述这些属性的信息，及指向IBO的指针等
-  - **将VBO、IBO绑定到上下文，本质上是绑定到当前上下文的VAO上（建立指针）**
-  - **绘制时，不关心上下文中的VBO/IBO，只关心上下文中的VAO，切换绘制对象只需要切换VAO**
+  - **将VBO绑定到上下文，本质上是绑定到当前上下文的VAO上（建立指针）**
+  - **绘制时，不关心上下文中的VBO，只需要切换VAO和IBO**
 - **顶点缓冲对象(VBO)**：**显存**中的一个数组，每个元素对应一个顶点，包含**单个顶点的所有属性（的具体值）**
 - **索引缓冲对象(IBO)**：**显存**中的一个数组，每个元素为顶点索引（**必须使用无符号数**），每三个元素一组，表示构成一个三角形的顶点顺序
 
@@ -27,14 +27,18 @@
 
 #### 变量
 
-- **单个着色器中**定义的变量有各不相同的**location**作为标识符
 - 生命周期（持有者）是**单个着色器**
 
 #### uniform变量
 
-- 在着色器代码中以`uniform`前缀修饰的变量
-- 生命周期（持有者）是整个**着色器程序**（在整个着色器程序中有独一无二的location），可避免给多个着色器传递重复数据；在各个着色器代码中**禁止修改**
+- 在着色器代码中以`uniform`前缀修饰的变量，在单个着色器程序中有**location**作为标识符（和`layout(location = ?) in `不是一个location）
+- 生命周期（持有者）是整个**着色器程序**，可避免给多个着色器传递重复数据；在各个着色器代码中**禁止修改**
 - 可通过`glGetUniformLocation`，`glUniform1f`等API便捷地访问shader中的数据，是定义**外部可调参数**的通用做法
+
+### 纹理
+
+- GPU中有若干个纹理**插槽**，每个插槽存放一个纹理
+- 类似于缓冲区，OpenGL中有多种**不同类型**的纹理，对于每种类型的纹理，同一时刻只能有一个绑定到上下文
 
 ## API
 
@@ -109,7 +113,7 @@ void glVertexAttribPointer( //指明VBO中某个属性的布局
 - 一个着色器绑定到着色器程序后，如果不再需要绑定到其他着色器程序，便可以删除
 
 ```c++
-GLuint glCreateProgram();//创建着色器程序,返回索引号
+GLuint glCreateProgram();//为一个着色器程序分配id
 
 void glUseProgram( 	//将指定着色器程序绑定到上下文
     GLuint program);
@@ -141,6 +145,37 @@ GLint glGetUniformLocation( //获取指定着色器程序中的uniform变量
 void glUniform1f( 	//修改当前上下文中,指定location对应的uniform变量的值
     GLint location,
 	GLfloat v0);
+```
+
+### Texture
+
+```c++
+void glGenTextures( 	//为若干个纹理分配id
+    GLsizei n,
+	GLuint * textures);
+
+void glActiveTexture( 	//规定接下来要修改的插槽
+    GLenum texture);
+
+void glBindTexture( 	//将指定纹理绑定到上下文,占用当前上下文所规定的插槽
+    GLenum target,		//纹理类型
+	GLuint texture);
+
+void glTexParameterf( 	//设置当前上下文中的纹理参数
+    GLenum target,		//纹理类型
+	GLenum pname,
+	GLfloat param);
+
+void glTexImage2D( 			//为指定纹理分配内存,并写入来自二维图片的数据
+    GLenum target,			//纹理类型
+	GLint level,			//LOD等级(从0开始,每增加1,相当于在mipmap上深入一层)
+	GLint internalFormat,	//图片格式
+	GLsizei width,
+	GLsizei height,
+	GLint border,
+	GLenum format,
+	GLenum type,
+	const GLvoid * data);
 ```
 
 ### Draw
