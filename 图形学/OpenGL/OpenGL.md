@@ -20,6 +20,7 @@
   - **绘制时，不关心上下文中的VBO，只需要切换VAO和IBO**
 - **顶点缓冲对象(VBO)**：**显存**中的一个数组，每个元素对应一个顶点，包含**单个顶点的所有属性（的具体值）**
 - **索引缓冲对象(IBO)**：**显存**中的一个数组，每个元素为顶点索引（**必须使用无符号数**），每三个元素一组，表示构成一个三角形的顶点顺序
+- **绘制缓冲区(Draw Buffer)**：存放片元着色器渲染结果的缓冲区
 
 ### 着色器程序
 
@@ -39,6 +40,24 @@
 
 - GPU中有若干个纹理**插槽**，每个插槽存放一个纹理
 - 类似于缓冲区，OpenGL中有多种**不同类型**的纹理，对于每种类型的纹理，同一时刻只能有一个绑定到上下文
+
+## 混合
+
+- 混合在**绘制缓冲区**中进行；绘制缓冲区有若干个，可以分别设置不同的混合函数
+
+$$
+\mathbf {c_d'}=\mathbf {f_s} \cdot \mathbf {c_s}+\mathbf {f_d} \cdot \mathbf {c_d} \quad
+其中\mathbf d,\mathbf f,\mathbf g,\mathbf d均为四维列向量 \hfill \\
+\mathbf {c_d'}:混合后缓冲区中颜色 \quad \mathbf {c_d}:混合前缓冲中颜色  \quad \mathbf {c_s}:待混合颜色 
+\quad \mathbf {f_s}:源系数向量 \quad \mathbf {f_d}:目标系数向量\hfill \\
+\\
+最常见的透明混合方式:\mathbf {c_d'}=\begin{bmatrix} \alpha \\ \alpha \\ \alpha \\ \alpha \end{bmatrix}  
+\cdot \mathbf {c_s}+
+\begin{bmatrix} 1-\alpha \\ 1-\alpha \\ 1-\alpha \\ 1-\alpha \end{bmatrix}  \cdot \mathbf {c_d} \hfill \\
+\alpha:待混合颜色的透明度 \hfill \\
+$$
+
+- 规定混合函数，本质上就是规定$\mathbf {f_s},\mathbf {f_d}$
 
 ## API
 
@@ -192,6 +211,23 @@ void glDrawElements( 		//根据IBO绘制图形
 	GLenum type,			//IBO的元素类型
 	const GLvoid * indices);//IBO的地址(如果已有IBO绑定,含义变为相对于已绑定IBO首地址的偏移量)
 ```
+
+## Blend
+
+```c++
+glEnable(GL_BLEND);		//启用混合
+
+void glBlendFunc( 		//设置所有绘制缓冲区的混合函数
+    GLenum sfactor,		
+	GLenum dfactor);
+
+void glBlendFunci(		//设置指定绘制缓冲区的混合函数 	
+    GLuint buf,			//颜色缓冲id
+	GLenum sfactor,
+	GLenum dfactor);
+```
+
+
 
 ### Query
 
