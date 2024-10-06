@@ -47,7 +47,7 @@
 
 $$
 \mathbf {c_d'}=\mathbf {f_s} \cdot \mathbf {c_s}+\mathbf {f_d} \cdot \mathbf {c_d} \quad
-其中\mathbf d,\mathbf f,\mathbf g,\mathbf d均为四维列向量 \hfill \\
+(均为四维列向量) \hfill \\
 \mathbf {c_d'}:混合后缓冲区中颜色 \quad \mathbf {c_d}:混合前缓冲中颜色  \quad \mathbf {c_s}:待混合颜色 
 \quad \mathbf {f_s}:源系数向量 \quad \mathbf {f_d}:目标系数向量\hfill \\
 \\
