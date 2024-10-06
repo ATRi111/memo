@@ -310,8 +310,3 @@ glfwMakeContextCurrent(GLFWwindow* handle):将当前活跃的上下文设为指�
 void glfwSwapBuffers(GLFWwindow *window):将当前窗口的后缓冲区绑定到OpenGL上下文,使前后缓冲区的身份交换
     window:窗口指针
 ```
-
-# GLM
-
-- 适用于OpenGL的数学库
-- 矩阵是**列主序**而非行主序的（每列占据一块连续的内存），受此影响，和正常的行主序矩阵乘法相比，glm中**矩阵乘法的顺序是相反的**（相当于把矩阵转置，导致乘法顺序相反）；而着色器中的矩阵乘法依然是正常顺序
