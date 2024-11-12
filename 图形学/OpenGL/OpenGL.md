@@ -26,7 +26,9 @@
   - **绘制时，不关心上下文中的VBO，只需要切换VAO和IBO**
 - **顶点缓冲对象(VBO)**：**显存**中的一个数组，每个元素对应一个顶点，包含**单个顶点的所有属性（的具体值）**
 - **索引缓冲对象(IBO)**：**显存**中的一个数组，每个元素为顶点索引（**必须使用无符号数**），每三个元素一组，表示构成一个三角形的顶点顺序
-- **帧缓冲区(FBO)**：颜色、深度、透明度、模板等缓冲构成的整体，存放着色器渲染结果
+- **帧缓冲区(FBO)**：存放着色器渲染结果的缓冲区
+  - 可以绑定若干个**附件**（颜色、深度、透明度、模板等缓冲等），绑定附件相当于指定某个缓冲区来接收渲染结果
+
 
 ### 着色器程序
 
@@ -197,11 +199,11 @@ void glGenTextures( 	//为若干个纹理分配id
 	GLuint * textures);
 
 void glActiveTexture( 	//规定接下来要修改的插槽
-    GLenum texture);
+    GLenum texture);	//纹理插槽(通常写成GL_TEXTURE0+offset)
 
 void glBindTexture( 	//将指定纹理绑定到上下文,占用当前上下文所规定的插槽
     GLenum target,		//纹理类型
-	GLuint texture);
+	GLuint texture);	//纹理的id(不是纹理插槽的id)
 
 void glTexParameterf( 	//设置当前上下文中的纹理参数
     GLenum target,		//纹理类型
