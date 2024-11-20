@@ -44,9 +44,9 @@ MP3：适用于非循环音频，也适用于某些特殊平台
 - UI坐标：UI的Transfrom或RectTransform组件的position及localPosition属性含义一致，均为世界坐标和本地坐标。RectTransfrom中显示的数字是anchoredPosition
 - Screen Space的UI和一般游戏物体**使用同一套世界坐标，只是世界坐标映射到屏幕坐标的方式不同**
 
-  - 对于一般游戏物体，世界坐标到屏幕坐标的映射取决于相机
-  - 对于Screen Space的UI，世界坐标到屏幕坐标的映射取决于Canvas
-  - 要控制UI间的位置关系时，优先考虑使用世界坐标
+  - **对于一般游戏物体、Screen Space - Camera的UI，World Space的UI，世界坐标到屏幕坐标的映射取决于相机**
+  - **对于的Screen Space - Overlay的UI，世界坐标就等于屏幕坐标**
+  - 要控制UI的位置关系时，优先考虑使用世界坐标
   - **不要在Awake中获取UI的世界坐标**，因为Canvas的Awake中的一些行为很可能导致其子UI的世界坐标改变
 
 # 资产
