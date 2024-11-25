@@ -216,9 +216,11 @@ Maximum Allowed Timestep是FixedUpdate可以执行的最长时间——实际上
 
 Unity中的可序列化分两种情况，一种是修改Inspector下的字段时会保存数据；一种是通过API将类写到硬盘上时（如JsonUtility，PrefabUtility，AssetDataBase）会保存数据
 
-对象首先要是可序列化的，才能使其序列化，常见的不可序列化对象包括除了List以外的数据结构（JsonUtolity无法直接序列化一个List对象，但可以序列化作为字段存在于一个类中的List对象）
+对象首先要是可序列化的，才能使其序列化，常见的不可序列化对象包括除了List以外的数据结构（JsonUtility无法直接序列化一个List对象，但可以序列化作为字段存在于一个类中的List对象）
 
 **[SerializeField]**：修饰字段。使其序列化，且Inspector中可见。public字段默认有此特性
+
+**[SerializeReference]**：类似于SerializeField，能够正确序列化涉及多态的实例；可以用于List，但在Inspector中点击“+”时，无法确定要添加哪种类型的实例
 
 **[Serializable]**：修饰类。如果类不是抽象类、静态类、泛型类，使其序列化，该类中的序列化字段会被序列化
 
