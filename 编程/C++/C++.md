@@ -1343,11 +1343,11 @@ public:
 
 - **如果一个成员没有出现在初始化成员列表中，必定要调用该成员的无参构造函数**
   - **没有无参构造函数的成员必须出现在初始化成员列表中**
-  - **直接构造比构造后再赋值开销更低**
+  - **直接初始化比初始化后再赋值开销更低**
   - **可以用于初始化常量成员、引用成员，但不可用于初始化静态成员**
   
 - **初始化成员列表按照定义变量的顺序执行，与列表中的顺序无关**
-- 如果构造函数的声明与定义分离，初始化成员列表仅出现在定义中
+- 如果构造函数的声明与定义分离，初始化成员列表应当仅出现在定义中
 
 ```C++
 class Test
@@ -2047,8 +2047,7 @@ int GetUniformLocation(const char* name) const
     {
         return it->second;
     }
-    int location = glGetUniformLocation(id, "u_Color");
-    return glGetUniformLocation(id, "u_Color");
+    return -1;
 }
 ```
 
