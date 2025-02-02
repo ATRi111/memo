@@ -143,7 +143,7 @@ void glDisableVertexAttribArray( //禁用上下文中VBO的某个属性
     GLuint index);
 
 void glVertexAttribPointer( //指明VBO中某个属性的布局
-    GLuint index,			//属性索引号(与顶点着色器代码相匹配)
+    GLuint index,			//属性索引号(顶点着色器中定义layout(location = index) in varaible_name即可访问此属性)
 	GLint size,				//该属性的分量数目(例如,位置、颜色通常有三个分量)
 	GLenum type,			//该属性分量的变量类型
 	GLboolean normalized,	//是否自动对该属性执行标准化
