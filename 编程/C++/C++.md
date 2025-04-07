@@ -2279,12 +2279,12 @@ int main()
   - **阻塞态：不满足运行条件，暂停运行；等待的事件发生后，转为就绪态**
   - **可连接态：运行完毕，资源尚未释放**
   - **终止态：资源已释放，线程本身的生命周期尚未结束**
-- **在A线程中创建B线程，A线程便成为B线程的持有者，被其他线程持有的线程，无法独立地占用资源；如果不调用其他任何函数，A线程执行完毕后即终止，释放资源，不论B线程是否仍需要这些资源**
+- **在A线程中创建B线程，A线程便成为B线程的持有者，B线程无法独立地占用资源；如果不调用其他任何函数，A线程执行完毕后即终止，释放资源，不论B线程是否仍需要这些资源**
 
 ### thread
 
-- **join：在A线程中，调用B线程的join方法的含义是，让A线程等到B线程执行完毕后，再继续执行**
-- **detach：在A线程中，调用B线程的detach方法的含义是，让B线程不再被A持有，B线程可以自己独立地占用资源**
+- **`join`：在A线程中，调用B线程的`join`方法的含义是，让A线程等到B线程执行完毕后，再继续执行**
+- **`detach`：在A线程中，调用B线程的`detach`方法的含义是，让B线程不再被A持有，B线程可以自己独立地占用资源**
 
 ```c++
 bool finished;
@@ -2311,7 +2311,7 @@ int main()
 
 ### mutex
 
--  相当于**记录型信号量**实现的**互斥锁**（**初值为1**）
+-  用于实现**互斥关系（互斥锁）**，本质是**记录型信号量（初值为1）**
 
 ```c++
 std::mutex mtx;
@@ -2342,13 +2342,83 @@ int main()
 
 ### lock_guard
 
-- **用mutex构造lock_guard实例，构造时自动lock，析构时自动unlock**
-- **通常用于局部作用域，简化lock和unlock的语法**
+- **对`mutex`的封装，用`mutex`构造`lock_guard`实例，构造时自动上锁，析构时自动解锁**
+- 通常用于局部作用域，简化lock和unlock的语法
 
 ### unique_lock
 
-- 有和lock_guard同样的用法
-- 构造时可额外指定**最大等待时间**，超过等待时间则无视信号量，直接进入就绪态
+- 对mutex的封装，用法相比lock_guard更加灵活
+  - 有和`lock_guard`相同的用法
+  - 构造时可传入`defer::lock`，表示构造时不自动上锁
+  - 构造时可额外指定**最大等待时间**，超过等待时间则直接**终止线程**，释放占用的资源
+- `try_lock_for`：上锁，并设定最大等待时间，超过等待时间则直接**终止线程**，释放占用的资源
+
+### condition_variable
+
+- 用于实现**同步关系**，本质上是**记录型信号量（初值为0）**
+- **`notify_all`相当于V操作，唤醒所有在等待条件满足的线程；如果确定只需要唤醒一个线程，可以使用`notify_once`**
+- 以下为生产者-消费者模型，`mtx`实现互斥关系，`cv`实现同步关系
+  - `cv`的值表示产品数量，`cv`大于0时，任意一个消费者可以取走一个产品
+  - 没有考虑缓冲区容量上限，因此没有再使用一个同步信号量
+
+```c++
+#include <iostream>
+#include <condition_variable>
+#include <mutex>
+#include <queue>
+#include <thread>
+
+std::mutex mtx;
+std::condition_variable cv;
+std::queue<int> product;
+
+void producer(int id) {
+    for (int i = 0; i < 5; ++i) {
+        std::unique_lock<std::mutex> lck(mtx);	//P(mtx)
+        product.push(id * 100 + i);				
+        std::cout << "Producer " << id << " produced " << product.back() << std::endl;
+        cv.notify_one();						//V(cv)
+        lck.unlock();							//V(mtx)
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+}
+
+void consumer(int id) {
+    while (true) {
+        std::unique_lock<std::mutex> lck(mtx);			//P(mtx)
+        cv.wait(lck, []{ return !product.empty(); });	//P(cv)
+        if (!product.empty()) 
+        {
+            int prod = product.front();
+            product.pop();
+            std::cout << "Consumer " << id << " consumed " << prod << std::endl;
+        }
+        lck.unlock();									//V(mtx)
+    }
+}
+
+int main() {
+    std::thread producers[2];
+    std::thread consumers[2];
+
+    for (int i = 0; i < 2; ++i) {
+        producers[i] = std::thread(producer, i + 1);
+    }
+
+    for (int i = 0; i < 2; ++i) {
+        consumers[i] = std::thread(consumer, i + 1);
+    }
+
+    for (int i = 0; i < 2; ++i) {
+        producers[i].join();
+        consumers[i].join();
+    }
+
+    return 0;
+}
+```
+
+
 
 ## 计时
 
