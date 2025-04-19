@@ -2356,18 +2356,15 @@ int main()
 ### condition_variable
 
 - 用于实现**同步关系**，本质上是**记录型信号量（初值为0）**
+- **`wait`操作相当于P操作；且特别地，阻塞线程时会将之前上锁的互斥量解锁，因此先对互斥量上锁也不会导致死锁**
+  - **给出等待条件，不意味着等待条件满足时会自动唤醒；而是在调用notify时，判断条件是否满足以确定是否唤醒**
+
 - **`notify_all`相当于V操作，唤醒所有在等待条件满足的线程；如果确定只需要唤醒一个线程，可以使用`notify_once`**
 - 以下为生产者-消费者模型，`mtx`实现互斥关系，`cv`实现同步关系
   - `cv`的值表示产品数量，`cv`大于0时，任意一个消费者可以取走一个产品
   - 没有考虑缓冲区容量上限，因此没有再使用一个同步信号量
 
 ```c++
-#include <iostream>
-#include <condition_variable>
-#include <mutex>
-#include <queue>
-#include <thread>
-
 std::mutex mtx;
 std::condition_variable cv;
 std::queue<int> product;
