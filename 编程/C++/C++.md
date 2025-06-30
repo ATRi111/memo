@@ -348,6 +348,7 @@ bool compare(int a, int b)
 
 int main() 
 {
+    //规定map中的排序方法,此处不可用auto
     std::map<int, std::string, decltype(compare)*> myMap(compare);
     return 0;
 }
@@ -478,9 +479,12 @@ void Invoke(Args... args)
 #else
 #define NULL ((void *)0)
 #endif
+
+using nullptr_t = decltype(nullptr);
 ```
 
-- **(void *)0可能导致指针和整数的混淆，而nullptr不可能隐式被转换成整数0（nullptr需要通过模板类来实现）**
+- **`NULL`是`(void *)0`，可以转换成各种指针和数值类型，容易造成混淆**
+- **`nullptr`是`std::nullptr_t`类型的一个字面量，本身不是指针，能转换成各种类型的指针**
 
 ### 常量指针
 
@@ -2084,6 +2088,7 @@ int main()
 - shared_ptr离开作用域时析构，析构函数中使计数器-1
 - 计数器归0时释放指针指向的内存，以及计数器的内存
 - **不能手动回收**（可能造成内存泄漏）
+- **两个类实例相互持有对方的shared_ptr时，会导致内存无法回收（通常，应当令父对象持有子对象的shared_ptr，子对象持有父对象的weak_ptr）**
 
 ```c++
 int main()
