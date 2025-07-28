@@ -17,3 +17,8 @@
 
 - 包含VBO，VBO即若干个Buffer构成的数组
 - 没有EBO（相当于总是使用[1,2,3,4,...]这样的EBO）；通过Topology规定顶点构成图元的方式
+
+## FBO
+
+- FBO::Desc类用于记录FBO上绑定的若干个颜色缓冲附件、和一个深度/模板缓冲附件
+  - 每个附件用一个FBO::Desc::TargetDesc类示例表示
