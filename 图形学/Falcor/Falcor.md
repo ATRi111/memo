@@ -1,3 +1,12 @@
+# 工作流
+
+### 创建Pass
+
+1. 打开tools\make_new_render_pass.py
+2. 修改create_project的参数
+3. 调试程序
+4. 运行setup_vs2022.bat
+
 # API
 
 ## Object
@@ -22,3 +31,8 @@
 
 - FBO::Desc类用于记录FBO上绑定的若干个颜色缓冲附件、和一个深度/模板缓冲附件
   - 每个附件用一个FBO::Desc::TargetDesc类示例表示
+
+## RenderPass
+
+- RenderGraph中的一个节点，接收上一个Pass的输入，计算后产生输出
+- 在`reflect`函数中规定此Pass的输入和输出
