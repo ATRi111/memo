@@ -4,8 +4,13 @@
 
 1. 打开tools\make_new_render_pass.py
 2. 修改create_project的参数
-3. 调试程序
+3. 调试py程序
 4. 运行setup_vs2022.bat
+
+### 运行Pass
+
+1. 编写脚本（scripts文件夹）
+2. 运行解决方案，通过Load Scipt加载脚本
 
 # API
 
@@ -31,6 +36,10 @@
 
 - FBO::Desc类用于记录FBO上绑定的若干个颜色缓冲附件、和一个深度/模板缓冲附件
   - 每个附件用一个FBO::Desc::TargetDesc类示例表示
+
+## RenderGrpah
+
+- 表示由若干个Pass组成的渲染管线
 
 ## RenderPass
 

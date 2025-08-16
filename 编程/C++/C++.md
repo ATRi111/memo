@@ -303,6 +303,22 @@ int main()
 }
 ```
 
+- **匿名命名空间**中的对象只能被本文件访问，因此只能用在**源文件**中（用于代替**静态全局变量**）
+
+```c++
+namespace	
+{
+    const char kOutputSize[] = "outputSize";
+    const char kFixedOutputSize[] = "fixedOutputSize";
+    const char kSamplePattern[] = "samplePattern";
+    const char kSampleCount[] = "sampleCount";
+    const char kUseAlphaTest[] = "useAlphaTest";
+    const char kAdjustShadingNormals[] = "adjustShadingNormals";
+    const char kForceCullMode[] = "forceCullMode";
+    const char kCullMode[] = "cull";
+}
+```
+
 ## 关键字
 
 ### auto
@@ -329,11 +345,17 @@ int main(int argc, char** argv)
 }
 ```
 
-## inline
+### static
+
+- **修饰全局变量（或函数）时，表示该全局变量（或函数）的作用域为当前文件（建议改用匿名命名空间）**
+- 修饰类成员时，表示该成员属于类而非任何一个实例
+- 修饰本地变量时，表示该变量只会初始化一次且生命周期持续到程序结束
+
+### inline
 
 - **在现代编译器中，内联已完全由编译器控制，inline与内联无关**
 - **头文件中声明的函数均需要以inline修饰（如果声明与定义重合，inline是默认省略的；否则必须用inline修饰声明）**
-- **源文件中的声明函数通常不以inline修饰，除非仅在本文件内部使用**
+- **源文件中的声明函数通常不以inline修饰，除非该函数不在头文件中声明（仅在源文件内使用）**
 
 ### decltype
 
@@ -446,12 +468,10 @@ void Invoke(Args... args)
 
 ### 全局变量
 
-- 作用域为全局
+- **定义在类外部的变量，作用域为全局**
 - **通常在头文件中声明（必须以extern修饰），在源文件中定义**
+  - **被static修饰时，作用域缩小到本文件，因此仅能用在源文件中**
 
-### 静态全局变量
-
-- **作用域为本文件的全局变量**
 
 ## 指针
 
