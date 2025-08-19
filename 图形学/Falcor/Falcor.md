@@ -43,5 +43,24 @@
 
 ## RenderPass
 
-- RenderGraph中的一个节点，接收上一个Pass的输入，计算后产生输出
+- RenderGraph中的一个节点，接收上一个Pass的输入，计算后输出给下一个Pass
 - 在`reflect`函数中规定此Pass的输入和输出
+
+## ResourceBindFlags
+
+- 规定缓冲区的类型，本质上是规定如何访问缓冲区
+- 可以使用或运算，表示一个缓冲区兼有多种功能
+
+| 枚举常量              | 说明                   |
+| --------------------- | ---------------------- |
+| None                  | 临时缓冲区             |
+| Vertex                | 顶点缓冲区(VAO和VBO)   |
+| Index                 | 顶点索引缓冲区(EBO)    |
+| Constant              | 常量                   |
+| StreamOutput          | 接收流输出的缓冲区     |
+| ShaderResource        | 只读缓冲区             |
+| UnorderedAccess       | 可同时读写缓冲区       |
+| RenderTarget          | 只写缓冲区             |
+| DepthStencil          | 可用作深度测试的缓冲区 |
+| Shared                |                        |
+| AccelerationStructure | 加速结构               |
