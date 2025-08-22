@@ -12,6 +12,8 @@
 1. 编写脚本（scripts文件夹）
 2. 运行解决方案，通过Load Scipt加载脚本
 
+- 如果要添加新文件，应当在Source文件夹中添加，并修改CMakeLists文件，然后在VS中选择重建项目
+
 # API
 
 ## Object
@@ -64,3 +66,15 @@
 | DepthStencil          | 可用作深度测试的缓冲区 |
 | Shared                |                        |
 | AccelerationStructure | 加速结构               |
+
+## Property
+
+- 记录所有渲染时可调整的参数（与缓冲区区分开来）
+- 通过类似字典的结构来存储（key是字符串，而value可以是各种类型的变量）
+
+## Program
+
+- Shader Program
+
+# Slang文件
+
