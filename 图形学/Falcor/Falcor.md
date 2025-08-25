@@ -72,9 +72,21 @@
 - 记录所有渲染时可调整的参数（与缓冲区区分开来）
 - 通过类似字典的结构来存储（key是字符串，而value可以是各种类型的变量）
 
+## ChannelDesc
+
+- Channel指的是Pass渲染一个缓冲区的过程，一个Pass可以带有若干个Channel
+
+### ChannelList
+
+- `ChannelDesc`数组
+
 ## Program
 
 - Shader Program
+
+## ShaderVar
+
+- 着色器变量
 
 # Slang文件
 
