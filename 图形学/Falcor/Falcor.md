@@ -4,8 +4,8 @@
 
 1. 打开tools\make_new_render_pass.py
 2. 修改create_project的参数
-3. 调试py程序
-4. 运行setup_vs2022.bat
+3. 运行py程序
+4. 运行CMakeLists文件（或运行setup_vs2022.bat）
 
 ### 运行Pass
 
@@ -50,31 +50,37 @@
 
 ## ResourceBindFlags
 
-- 规定缓冲区的类型，本质上是规定如何访问缓冲区
-- 可以使用或运算，表示一个缓冲区兼有多种功能
+- 规定资源（缓冲区或纹理）的类型，本质上是规定如何访问资源
+- 可以使用或运算，表示一个资源兼有多种功能
 
-| 枚举常量              | 说明                   |
-| --------------------- | ---------------------- |
-| None                  | 临时缓冲区             |
-| Vertex                | 顶点缓冲区(VAO和VBO)   |
-| Index                 | 顶点索引缓冲区(EBO)    |
-| Constant              | 常量                   |
-| StreamOutput          | 接收流输出的缓冲区     |
-| ShaderResource        | 只读缓冲区             |
-| UnorderedAccess       | 可同时读写缓冲区       |
-| RenderTarget          | 只写缓冲区             |
-| DepthStencil          | 可用作深度测试的缓冲区 |
-| Shared                |                        |
-| AccelerationStructure | 加速结构               |
+| 枚举常量              | 说明                 |
+| --------------------- | -------------------- |
+| None                  | 临时缓冲区           |
+| Vertex                | 顶点缓冲区(VAO和VBO) |
+| Index                 | 顶点索引缓冲区(EBO)  |
+| Constant              | 常量缓冲区           |
+| StreamOutput          | 接收流输出的缓冲区   |
+| ShaderResource        | 只读纹理             |
+| UnorderedAccess       | 任意位置读写纹理     |
+| RenderTarget          | 只写纹理             |
+| DepthStencil          | 深度纹理             |
+| Shared                |                      |
+| AccelerationStructure | 加速结构             |
 
 ## Property
 
-- 记录所有渲染时可调整的参数（与缓冲区区分开来）
+- 记录所有可以由外部脚本设置的渲染参数
 - 通过类似字典的结构来存储（key是字符串，而value可以是各种类型的变量）
 
 ## ChannelDesc
 
 - Channel指的是Pass渲染一个缓冲区的过程，一个Pass可以带有若干个Channel
+- ChannelDesc包含了描述Channel的信息：
+  - `name`：Channel名
+  - `texname`：要渲染的纹理在着色器中的名称
+  - `optional`：是否启用
+  - `format`：纹理数据格式
+
 
 ### ChannelList
 
