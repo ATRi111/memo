@@ -11,19 +11,25 @@
 
 ### 加载方式
 
-DecompressOnLoad：加载时解压，占用CPU少，占用内存多，适用于小音频
+- DecompressOnLoad：加载时解压，占用CPU少，占用内存多，适用于小音频
 
-CompressedInMemory：播放时才解压，占用CPU多，占用内存小
 
-Streaming：流式加载，适用于长音频
+- CompressedInMemory：播放时才解压，占用CPU多，占用内存小
+
+
+- Streaming：流式加载，适用于长音频
+
 
 ## 压缩方式
 
-Vobis：压缩比好
+- Vobis：压缩比好
 
-ADPCM：解压速度快
 
-MP3：适用于非循环音频，也适用于某些特殊平台
+- ADPCM：解压速度快
+
+
+- MP3：适用于非循环音频，也适用于某些特殊平台
+
 
 # 相机
 
@@ -127,13 +133,26 @@ $$
 - 异步
 - 数学优化
 
-### 查找相关
+### Unity API
 
-- 游戏物体的tag本质上是int，所以按tag搜索比按名字搜索更快（即使先通过tag粗查找，再根据逐个name判断也能提高性能）
+- 游戏物体的tag本质上是int，所以按tag搜索比按名称搜索更快（先用tag粗查，再用name细查也能提高性能）
 
-## UGUI
+## 渲染
 
-主要目标是减少顶点，减少rebatch，减少rebuild
+### 合批(Batch)
+
+- 动态合批：对于**顶点数较少**且**着色器参数(包括材质参数和Transform)**相同**的各种Mesh，将其VBO合并，以**减少Draw Call次数**
+  - 由引擎自动完成，在CPU上预处理
+- 静态合批：对于标记为**Static(Transform不可变)**的Gameobject，预计算其模型变换，将世界空间下的结果存储下来
+  - 由引擎自动完成，在CPU上预处理，会导致包体变大
+- GPU Instancing：对于多个**着色器(材质)相同的相同Mesh**，利用OpenGL/DX的**多实例渲染API**，一次性渲染多个Mesh实例
+  - 每个Mesh实例被分配一个InstanceID，表示它使用哪一套着色器参数
+  - 材质须勾选“Enable GPU Instancing”，且要设置多套材质参数必须用**MaterialPropertyBlock**（运行前设置参数也不行）
+
+### UGUI
+
+- 主要目标：减少顶点，减少rebatch，减少rebuild
+
 
 - 尽量减少UI元素间的相互遮蔽，会移动、变化的对象尽量置于最下层
 - 尽量把会变化的UI和不会变化的UI分在不同的Cavas里，因为变化会导致rebatch，而rebatch是以Canvas为单位的
@@ -141,18 +160,36 @@ $$
 - RenderMode尽量选择Overlay模式
 - 同样要关注Material的优化
 
-## Mesh
+### Mesh
 
-- 减面
-- LOD
+- LoD
 
-## Material
-
-渲染中有batch操作，batch操作是影响渲染性能的关键因素
+### Material
 
 - 尽量复用材质，如果可以通过参数调整实现不同，就不要新建材质
 - 尽量使纹理更小，图片中不要有大片的空白
-- 如果一张图片中包含多个纹理（由切割生成），它们中任何一个被使用的话，整张图片都不会被释放，所以非要在一个图片中放多个纹理的话，尽量确保它们的生命周期相同
+- 对于单一图片包含多个纹理的情况，尽量确保这些纹理的生命周期相同
+
+## Entity-Coponent-System
+
+- **Coponent**：纯数据对象，每个组件包含一或多个结构体字段
+  - 须定义为结构体，并继承`ICoponentData`
+  - 如果包含类字段，则须改为继承`ISharedCoponentData`，且会带来性能损失
+- **Entity**：只包含ID和若干Coponent引用的对象
+- **System**：纯逻辑对象，用于访问各种Entity的Component
+  - 提供了`Query`这种高效遍历API和`GetComponentLookup`这种随机访问API
+- **ArchType**：一种ArchType表示**一组特定类型组件的组合**
+  - 可能有多种Entity对应同种ArchType
+- **Chunk**：内存中固定大小的一块区域，**在每个Chunk内**，对于**ArchType相同的一定数量的Entity，其各个Coponent分别连续存储**
+- **ChunkList**：每个ArchType维护一个ChunkList，一个ChunkList包含若干分散在内存各处的Chunk，和一个Chunk地址数组
+  - 这种架构不要求大片连续存储空间，又足以提高缓存命中率、支持SIMD
+
+- **Burst Compiler**：用于实现ECS特有的内存布局和访问逻辑的编译器
+  - 如果ECS的定义不满足上述规则，Burst失效，使用一般编译器来编译
+
+## JobSystem
+
+- Unity提供的便捷的、安全的多线程API
 
 # 脚本
 
@@ -162,51 +199,40 @@ $$
 
 <img src="屏幕截图 2022-02-22 234651.jpg" alt="屏幕截图 2022-02-22 234651" style="zoom:80%;" />
 
-将脚本挂载到游戏物体上时，会调用Reset方法，但此时脚本尚未被实例化。游戏开始时，脚本实例化，实例化顺序可以在**Edit > Project Settings->Script Execution Order**中修改，也可以用`[DefaultExecutionOrder(xxx)]`修改。
+- 加载一个场景时，脚本实例化，实例化顺序可以在**Edit > Project Settings->Script Execution Order**中修改，也可以用`[DefaultExecutionOrder(xxx)]`修改。
 
-脚本实例化时，Awake执行，OnEnable紧随其后，然后轮到下一个实例化的脚本。待所有Awake、OnEnable执行完，再执行所有脚本的Start。
 
-### 帧
+- 脚本实例化时，Awake执行，OnEnable紧随其后，然后轮到下一个实例化的脚本。待所有Awake、OnEnable执行完，再执行所有脚本的Start
+
+
+### 游戏帧
 
 <img src="屏幕截图 2022-02-22 234927.jpg" alt="屏幕截图 2022-02-22 234927" style="zoom: 80%;" />
 
-Update和LateUpdate之间，yield null的协程执行；到时间的yield WaitForSeconds的协程执行。LateUpdate之后，yield WaitForEndOfFrame的协程执行。
+- 一帧时间不固定，取决于负载
+- Update和LateUpdate之间，`yield null`，`yield WaitForSeconds`，`yield StartCoroutine`等协程依次执行
 
-输入检测发生在Update之前，获取输入结果的方法应由Update调用
+- 输入检测发生在Update之前，获取输入结果的方法应由Update调用
+- 需要等待Update执行完毕才能执行的行为应放到LateUpdate中，如相机移动、启用计时器等
 
-### 物理和动画
+### 固定帧
 
 ![屏幕截图 2022-02-22 235613](屏幕截图 2022-02-22 235613.jpg)
 
-物理状态更新处于FixedUpdate之后，穿插在动画更新之间。物理、动画相关的方法每固定帧执行一次。
+- 默认每20ms一帧，可在Time窗口调节
+- 每物理帧执行完所有FixedUpdate之后，进行物理更新
+- 穿插在动画更新之间。物理、动画相关的方法每固定帧执行一次
 
 ### 渲染
 
 ![屏幕截图 2022-02-22 235012](屏幕截图 2022-02-22 235012.jpg)
 
-OnGUI执行的频率是帧频的数倍
-
 ### 结束
 
 <img src="屏幕截图 2022-02-22 235613.jpg" alt="屏幕截图 2022-02-22 235613" style="zoom:80%;" />
 
-退出应用程序或退出play mode时，会调用OnApplicationQuit和OnDestroy。人为Destroy时，也会调用OnDestroy。但无论如何，只有**游戏对象处于激活状态**时，才可能调用OnDestroy。
-
-## 时间和帧率
-
-### 帧
-
-时间不固定，取决于负载。
-
-### 固定帧
-
-默认每20ms一帧，可在Time窗口调节。没有人为调整值就不会改变
-
-### Maximum Allowed Timestep
-
-通常情况下，Time.fixedDeltaTime可以代表两次FixedUpdate间的时间间隔Time.deltaTIme可以代表两次Update之间的时间间隔。但负载大时可能不是这样。如果物理更新的时间过长，这必然会导致固定帧帧率下降，而且也必然会导致帧率下降。为了缓解高强度物理更新造成的游戏卡顿，引入了**Maximum Allowed Timestep**
-
-Maximum Allowed Timestep是FixedUpdate可以执行的最长时间——实际上，FixedUpdate执行时间超过这个值时，不是强行终止，而是降低其执行频率。结果是，物理更新变慢，和图像不同步（通常不明显）
+- 退出应用程序或退出play mode时，会调用OnApplicationQuit和OnDestroy
+- 人为Destroy时，也会调用OnDestroy；只有游戏对象处于激活状态时，才可能调用OnDestroy
 
 ## 特性
 
