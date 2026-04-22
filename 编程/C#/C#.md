@@ -117,10 +117,18 @@
 
 # API
 
-## IComparable
+## 排序
+
+- 各种容器默认情况下均为**升序**
+
+```c#
+Array.Sort(arr, (a, b) => b.CompareTo(a));       //按相反顺序排序
+```
+
+### IComparable
 
 - 实现CompareTo时，自身减对方为升序
 
-## Comparer
+### Comparer
 
 - 实现Compare时，x-y为升序
