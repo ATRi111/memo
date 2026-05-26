@@ -28,10 +28,9 @@
   3. **编译**：每个**处理好的编译单元**经**编译程序**生成一个**汇编语言文件**；包括**词法分析，语法分析，语义分析，代码生成和优化**
   4. **汇编**：每个**汇编语言文件**经**汇编程序**生成一个**(可重定位的、未链接的)目标文件**
   5. **链接**：将若干个**目标文件**，经**链接器**分别生成**动态链接库**或**可执行程序**
-     - 某些项目中的若干个**目标文件**会先合并成**静态链接库**，以便复用
      - **符号解析**：将每个目标文件中的未定义符号（如外部函数、全局变量）与其他目标文件或库中的定义进行匹配
      - **重定位**：合并各目标文件的代码段和数据段，为符号分配运行时虚拟地址
-     - **静态链接**：静态链接库的内容可直接复制到可执行文件内
+     - **静态链接**：某些静态链接库的内容目标文件会先合并成**静态链接库**，可直接复制到可执行文件内
 
 ## 头文件
 
@@ -1201,29 +1200,26 @@ int main()
 ## lambda表达式
 
 - 用完即弃的匿名方法
+- lambda表达式中，可以**捕获**变量，分为按值捕获和按引用捕获（类似函数传参）
+- lambda表达式可以用作函数的返回值，赋值给`func`等对象
+  - 返回被捕获变量和返回一般变量类似，返回引用或指针有风险；必要时按值捕获（或取内容），将变量复制一份到函数外
+  
+
 
 ```c++
-template<typename T>
-int Compare(T x, T y, int(*Comparer)(T, T))
-{
-	return Comparer(x, y);
+#include <iostream>
+#include <functional>
+
+std::function<int()> create_lambda_bad() {
+    int local = 10;
+    // 自动按引用捕获所有用到的变量
+    return [&]() { return local; };
 }
 
-int CompareInt(int a, int b)
-{
-	if (a > b)
-		return 1;
-	if (a < b)
-		return -1;
-	return 0;
-}
-
-int main()
-{
-	auto Comparer1 = CompareInt;
-	cout << Compare(1, 2, Comparer1) << endl;
-	int(*Comparer2)(float, float)  = [](float a, float b) { return 0; };
-	cout << Compare(1.0f, 2.0f, Comparer2) << endl;		//直接传入lambda表达式时，无法正确编译
+std::function<int()> create_lambda_good() {
+    int local = 10;
+    // 自动按值捕获所有用到的变量
+    return [=]() { return local; };
 }
 ```
 
@@ -1968,7 +1964,7 @@ public:
     - **一个内核级线程阻塞，会导致属于它的用户级线程全部阻塞，但不会导致其他同级的内核级线程阻塞**
     - 即使全部内核级线程被阻塞，也不会导致进程被阻塞，只是没有线程在执行
   - **终止态：运行完毕，资源可能尚未释放**
-- C++程序中，**主线程**（执行`main`函数的线程）具有特殊性，它终止则意味着进程终止，会强制终止该进程的其他线程
+- C++程序中，**主线程**（执行`main`函数的线程）具有特殊性，它终止意味着进程终止，会强制终止该进程的其他线程
 - **在A线程中创建B线程，A线程便成为B线程的持有者，B线程无法独立地占用资源；如果不调用其他任何函数，A线程执行完毕后即终止，释放资源，不论B线程是否仍需要这些资源**
 
 ## thread
@@ -1978,7 +1974,7 @@ public:
   - joinable：`thread`正管理着一个线程
   - not joinable：`thread`没有在管理一个线程
 
-- **`join`：调用A的`join`的作用是，等待A管理的进程终止，然后将A设为not joinable（然后调用`join`的线程可以继续运行）**
+- **`join`：调用A的`join`的作用是，等待A管理的进程终止，然后将A设为not joinable（然后调用`join`的线程才可以继续运行）**
 - **`detach`：调用A的`detach`的作用是，将A设为not joinable，不再管理线程（该线程仍会独立运行，由操作系统回收）**
 
 ```c++
@@ -2118,6 +2114,42 @@ int main() {
 
 - `std::atomic<T>`类实例提供一系列原子操作API
 - 一些底层的操作直接调用CPU硬件指令，无需锁；在此基础上，利用软件层面的锁实现更多在外部看来“无锁”的原子操作
+- 所有`atomic<T>`实例**不能相互拷贝**，只能和`T`实例相互赋值
+- 各种API不会返回其自身的引用，只可能返回当前值的复制
+
+`atomic<T>`：
+
+| API                                                          | 含义                     |
+| ------------------------------------------------------------ | ------------------------ |
+| `store(T, memory_order order)`；`T operator=(T)`             | 赋值                     |
+| `T load(memory_order)`；`operator T() const`                 | 取值                     |
+| `int exchange(int, memory_order)`                            | 交换，返回旧值           |
+| `bool compare_exchange_weak(int&, int, memory_order, memory_order)` | 当前值符合预期时写入新值 |
+| `bool compare_exchange_strong(int&, int, memory_order, memory_order)` | 当前值符合预期时写入新值 |
+
+- 64位以内的整型支持原子算术操作（只能与另一个非原子整型运算）；C++20起，浮点数也支持原子加减
+
+`atomic<int>`：
+
+| API                                                       | 含义 |
+| --------------------------------------------------------- | ---- |
+| `int fetch_add(int, memory_order)`；`int operator+=(int)` | 加   |
+| `int fetch_sub(int, memory_order)`；`int operator-=(int)` | 减   |
+| `int fetch_and(int, memory_order)`；`int operator&=(int)` | 与   |
+| `int fetch_or(int, memory_order)`；`int operator|=(int)`  | 或   |
+| `int fetch_xor(int, memory_order)`；`int operator^=(int)` | 异或 |
+| `int operator++()`                                        | 自增 |
+| `int operator--()`                                        | 自减 |
+
+### memory_order
+
+| memory_order           | 含义 |
+| ---------------------- | ---- |
+| `memory_order_relaxed` |      |
+|                        |      |
+|                        |      |
+
+
 
 # API
 
@@ -2199,7 +2231,6 @@ int main()
   - **如果元素是指针，仅指针本身分配在堆上，仅释放指针本身（注意内存泄漏问题）**
   - **元素不能定义为引用**
   - **如果元素是实例，访问元素时考虑使用引用来避免拷贝**
-
 
 ### array
 
@@ -2304,7 +2335,6 @@ int main() {
 
 - **通过红黑树实现**，每个元素仅包含值
   - **元素始终有序，可以在构造时传入比较方法以自定义顺序，以及按顺序访问、范围查询**
-  - **存放自定义类型时，必须确保该类型重载了<**
   - **插入、删除的时间复杂度为O(log N)**
 - 数值类型的默认比较器表示**升序**
 
@@ -2774,3 +2804,20 @@ int main()
 }
 ```
 
+# 优化
+
+## CPU
+
+### 动态分支预测
+
+## 编译器
+
+### 内联
+
+### 静态分支预测
+
+### 常量折叠
+
+### SIMD
+
+### 循环展开

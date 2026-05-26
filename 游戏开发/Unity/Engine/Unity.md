@@ -127,9 +127,10 @@ Shader "Custom/KeywordExample"
   - 每个Mesh实例被分配一个InstanceID，表示它使用哪一套着色器参数
   - 需要单独设置一个实例的参数时，应使用MaterialPropertyBlock，避免创建新的材质实例
   - 此外，还可以在脚本中直接用`CommandBuffer`发出指令，用`Material.SetBuffer`一次性设置所有实例的参数，然后在着色器中直接用InstanceID访问
-- SRP Batcher：对于连续的多个Draw Call，如果其Shader Variant相同，避免CPU每次重复传递数据
+- SRP Batcher：对于**连续的多个Draw Call**，如果其**Shader Variant**相同，避免CPU每次重复传递数据
   - 由引擎自动在**CPU**上完成
-  - 为每种支持SRP Bathcer的Shader Variant创建持久化的常量缓冲区，？
+  - 同一Shader Variant创建出的**不同材质**同样可能支持
+  - 为每种支持SRP Bathcer的Shader Variant创建持久化的常量缓冲区，如果参数未更新，则CPU不必重复传数据
   - 这样连续的一组使用相同材质的物体称为一次SRP Batch（并不是真正意义上的Draw Call次数减少）
 
 
@@ -216,12 +217,12 @@ Shader "Custom/KeywordExample"
   - 回收后**不压缩**（不将不连续分布的对象移动到一起），导致内存碎片增多，进而导致更频繁的申请更大内存
   - 开发者无法自行实现压缩，只能尽量减少GC，减少内存分配（如对象池）
 
-- Root：垃圾回收器完全确定当前不会被回收的对象，如静态变量，栈上变量等
+- Roots：垃圾回收器完全确定当前不会被回收的对象，如静态变量，栈上变量等
 - GC会利用和维护一套数据结构，如**对象边界表**，**分配表**，**空闲表**
 - 流程：
   1. 扫描Roots
-  2. 从Roots出发，递归地确定需要保留的对象，将其标记为存活
-  3. 遍历堆中的所有对象，将未被标记的对象占用的内存释放
+  2. 从Roots出发，递归地确定需要保留的对象，将其标记为可达
+  3. 遍历堆中的所有对象，将未标记为可达的对象占用的内存释放
 - Unity默认使用**增量式GC**，即把一轮内GC内的工作**分配到多帧进行**
   - 性能要求极高的场景，可以通过**预分配内存+临时禁用GC**，进一步分摊GC成本
 
