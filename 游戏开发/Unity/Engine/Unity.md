@@ -141,7 +141,7 @@ Shader "Custom/KeywordExample"
 
 - 尽量减少UI元素间的相互遮蔽，会移动、变化的对象尽量置于最下层
 - 尽量把会变化的UI和不会变化的UI分在不同的Cavas里，因为变化会导致rebatch，而rebatch是以Canvas为单位的
-- 不要使用Layout组件
+- 尽量避免使用Layout组件
 - RenderMode尽量选择Overlay模式
 - 同样要关注Material的优化
 
