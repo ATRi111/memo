@@ -47,7 +47,7 @@
 - 使用**增量式GC**，即把一轮内GC内的工作**分配到多帧进行**
   - 性能要求极高的场景，可以通过**预分配内存+临时禁用GC**，进一步分摊GC成本
 
-## 核心
+## Actor
 
 ### UObject
 
@@ -66,7 +66,7 @@
 ### Actor
 
 - 指`AActor`及其子类实例，以及派生出的蓝图类
-- 只有Actor能直接放到场景中，地位类似`GameObject`，但自身也有一些逻辑（一般只有整个Actor共享的逻辑/数据）
+- 只有Actor能直接放到场景中，自身也有一些逻辑（一般只有整个Actor共享的逻辑/数据），类似`MonoBehavior+GameObject`
 
 生命周期（按顺序）：
 
@@ -97,7 +97,7 @@
 ### Component
 
 - 指`UActorComponent`及其子类对象，以及派生出的蓝图类
-- Component挂载在Actor上，地位类似`MonoBehaviour`
+- Component挂载在Actor或其他Component上，类似`MonoBehaviour+GameObject`
 
 生命周期（按顺序）：
 
@@ -112,17 +112,6 @@
 |                       |                               |                                                      |
 | `EndPlay`             | 销毁前                        |                                                      |
 | `Destroyed`           | 销毁后                        |                                                      |
-
-### Level
-
-- 指`ULevel`实例，不应该继承此类
-- `ULevel`用一个数组记录其中的所有Actor，其中的0号元素是`AWorldSetting`（当某个关卡被用作主关卡时，其`AWorldSetting`对World生效）
-- 额外持有一个特殊的Actor，`ALevelScriptActor`，是关卡蓝图的父类
-
-### World
-
-- 指`UWorld`实例，不应该继承此类
-- World中可以包含若干个Level，运行时动态变化
 
 ### FTickTaskManager
 
@@ -142,6 +131,59 @@
 | `TG_LastDemotable`  | 6      | 低优先级 Tick（可被降频）                               |
 | `TG_NewlySpawned`   | 7      | 本帧新生成的 Actor 的首次 Tick                          |
 
+## Inupt
+
+- 输入流程
+  1. 物理设备输入，操作系统封装为事件（平台有关）
+  2. `FSlateApplication`将操作系统事件封装为`FInputEvent`
+  3. 优先将事件分发给获得焦点的Widget，如果未被消费则继续传递
+  4. `UGameViewportClient`找到操作对应的`ULocalPlayer`
+  5. 该Player的`UEnhancedInputLocalPlayerSubsystem`遍历持有的IMC堆栈
+  6. 对于每个IMC，查找当前`FKey`对应的`UInputAction`
+  7. 对于找到的`UInputAction`，如果有`UInputModifier`链，逐个应用，将`RawValue`修改为`ModifiedValue`
+  8. 进一步根据`UInputTrigger`和输入值，判断操作是否触发，一旦触发，则消费此输入
+  9. 进一步调用`APlayerController::ProcessInputStack`，遍历栈中所有`UInputComponent`，调用`ProcessInput`；一旦被消费，则中止后续调用
+  10. 对于成功触发的`UInputAction`，调用其绑定的回调函数（如Actor行为）
+
+### FInputActionValue
+
+- 将所有类型的输入数据统一起来的类
+  - Boolean：单个按键
+  - Axis1D：扳机
+  - Axis2D：WASD组合键，摇杆
+  - Axis3D：VR手柄，3D鼠标
+
+### FKey
+
+- 单个物理按键/摇杆/扳机
+- 每个具体的Key都预设好了对应的输入数据类型
+
+### UInputAction
+
+- 定义玩家接收到输入后执行的一个行为
+- 将按键和玩家行为解耦；多个按键可以触发同一行为，为按键绑定提供支持
+
+### InputMappingContext
+
+- 
+
+### UInputModifier
+
+- 
+
+## World
+
+### Level
+
+- 指`ULevel`实例，不应该继承此类
+- `ULevel`用一个数组记录其中的所有Actor，其中的0号元素是`AWorldSetting`（当某个关卡被用作主关卡时，其`AWorldSetting`对World生效）
+- 额外持有一个特殊的Actor，`ALevelScriptActor`，是关卡蓝图的父类
+
+### World
+
+- 指`UWorld`实例，不应该继承此类
+- World中可以包含若干个Level，运行时动态变化
+
 ### GameMode
 
 - 通常用于规定规则（游戏开始结束，获胜条件，关卡切换，玩家加入、重生等）
@@ -155,7 +197,9 @@
 
 # 蓝图
 
-- 几类资源文件的统称，与C++协同使用（非必须）
+- 几类资源文件的统称，类似于支持多种资源类型的Prefab，与C++协同使用（非必须）
+
+- 通过继承`FBlueprintEditor`，各种不同的蓝图有不同的编译器
 
 - 各种蓝图资产中，与程序有关的部分会**增量编译**成**字节码**，由**蓝图虚拟机**运行
   - 和C++程序相比，编译更快，执行更慢；因此更适合实现表层的、经常修改的逻辑
@@ -167,7 +211,8 @@
 - 蓝图资产的一种，**概念上单继承**自一个C++类，但本身**不是C++类**
   - 编译而得的机器码在类的上下文中运行（可访问父类成员），以体现继承、多态
   - 能够通过**蓝图接口**绕开单继承的限制
-- 除了程序，还有类似Prefab的功能（如设置参数默认值），且不同蓝图类的编辑窗口不同（如Actor蓝图中可设置Component）
+  - 可以有多个蓝图类继承同一C++类
+- 除了程序，还有设置参数默认值等功能，且不同蓝图类的编辑窗口不同（如Actor蓝图中可设置Component）
 - 要让蓝图访问C++类成员，需要用`UCLASS`宏修饰类，设为对蓝图可见
   - 静态函数和成员函数需要用`UFUNCTION`修饰，设为对蓝图可见
     - 调用成员函数需要指定实例(Target)，如果是父类的成员函数，Target默认为self
@@ -181,14 +226,25 @@
 | `EditDefaultsOnly`   | 只能保持默认值 |
 | `BlueprintReadWrite` | 蓝图中可读写   |
 
-| UFUNCTION参数                 | 含义                           |
-| ----------------------------- | ------------------------------ |
-| `BlueprintCallable`           | 蓝图中可调用                   |
-| `BlueprintPure`               | 纯函数（不能调用其他非纯函数） |
-| `BlueprintImplementableEvent` | 留给蓝图实现的纯虚函数         |
+| UFUNCTION参数                 | 含义                      |
+| ----------------------------- | ------------------------- |
+| `BlueprintCallable`           | 蓝图中可调用              |
+| `BlueprintPure`               | 蓝图中呈现为纯函数[1]     |
+| `BlueprintImplementableEvent` | 留给蓝图实现的纯虚函数[2] |
 
+[1]：纯函数只有输入输出，没有调用和被调用引脚，蓝图虚拟机只会在必要时自动调用纯函数
 
-## 关卡蓝图
+[2]：蓝图中无法调用，只能由C++代码调用（如果额外用`BlueprintCallable`修饰，会多出一个蓝图函数，和事件是两种节点）
+
+### Actor蓝图
+
+- 指继承自某个`AActor`子类的蓝图
+- 可以在C++中为Actor挂载组件；在**构造函数**中挂载的组件，创建出的Actor蓝图中能直接看到（只读）
+- 也可以在Actor蓝图中挂载组件，C++中可以定义/获取子组件（也可以由蓝图）
+
+### Coponent蓝图
+
+### 关卡蓝图
 
 - 一个特殊的蓝图类（继承自`ALevelScriptActor`)，仅存在于关卡文件中
 - 用于实现关卡特有的逻辑，通常应该让蓝图类来获取关卡蓝图，并在关卡蓝图中定义一些事件
@@ -247,154 +303,4 @@
 
 
 
-
-## 代码框架
-
-### UObject
-
-- Unreal中所有类的父类
-- 提供序列化、反射、自动内存分配回收
-
-### AActor
-
-- 具有Tick函数、父物体(Owner)、子物体(Children)、组件(InstanceComponents)
-- 不一定有Transform但有便捷的方法来访问其position或rotation
-- Actor被实例化时，其OwnedComponents也被实例化为InstanceComponents，网络复制时产生ReplicationComponents，InstanceComponents中通常包含一个SceneComponent(只有包含此组件才能被放入Level中)作为RootComponent
-
-
-
-### UActorComponent
-
-- 组件，包含RecieveTick函数、拥有者(OwnerPrivate)、所处的世界(WorldPriavte)
-- 组件有嵌套关系
-
-<img src="屏幕截图 2022-07-24 093952.png" alt="屏幕截图 2022-07-24 093952" style="zoom:50%;" /><img src="屏幕截图 2022-07-24 094209.png" alt="屏幕截图 2022-07-24 094209" style="zoom:50%;" />
-
-### ULevel
-
-- 场景，包含AActor
-- 每个场景必然包含一份AWorldSettings，必定是Actors数组中的0号元素
-- 可用于分块加载
-
-![屏幕截图 2022-07-24 094320](屏幕截图 2022-07-24 094320.png)
-
-### AWorldSetting
-
-- 包含若干AGameMode
-
-### UWorld
-
-- 包含多个场景，每个场景中包含若干ULevel
-- CurrentLevel为当前控制的类，PersistentLevel为永久存在的类（所以使用此Level的WorldSetting作为**全局关卡设置**）
-- UWorld可以有多个，但同时只能运行一个
-
-### APawn
-
-- 受到Controlle控制(每个Pawn有默认的Controller)
-- 具有移动和接收输入的功能
-
-### ACharacter
-
-- 在APawn的基础上，具有人形(网格、碰撞体、骨骼蒙皮)
-
-### AController
-
-- 控制一个Pawn，并不是死绑定的，可以切换操控的角色
-- 通常将输入相关的逻辑写在这里
-
-<img src="C:/Users/16571/AppData/Roaming/Typora/typora-user-images/image-20220724100332011.png" alt="image-20220724100332011" style="zoom:50%;" /><img src="屏幕截图 2022-07-24 110122.png" alt="屏幕截图 2022-07-24 110122" style="zoom:50%;" />
-
-
-
-### APlayerState
-
-- 默认包含分数和PlayerId(可用作标识符，尤其在网络同步中)
-- 通常将其他状态信息写在这里
-- HUD通常也写在这里
-
-### UPlayer
-
-- 不是Actor，用于保存与Player有关的信息及网络同步
-
-![屏幕截图 2022-07-24 103614](屏幕截图 2022-07-24 103614.png)
-
-### UEngine
-
-![image-20220724100043115](C:/Users/16571/AppData/Roaming/Typora/typora-user-images/image-20220724100043115.png)
-
-### AGameMode
-
-- 游戏模式，通常将Level的切换规则写在这里，每个关卡都可使用若干GameMode(同时只能由一个生效)
-- 如果WorldSettings中的GameMode为NULL，会使用默认的GameMode
-- 继承自AGamemodeBase，逻辑不复杂时，继承AGamemodeBase即可
-- 在这里设置APlayerController
-
-![屏幕截图 2022-07-24 100208](屏幕截图 2022-07-24 100208.png)
-
-### AGameState
-
-- 关卡状态，生命周期与Level相同
-- 通常，UGameInstance中的字段觉得AGameState，AGameMode用AGameState作为关卡切换的依据
-
-### UGameInstance
-
-- 唯一的，包含与整个游戏有关的信息，生命周期为整个游戏
-
-### ISaveGameInstance
-
-- 包含存档、读档、删档等接口
-
-## Actor生命周期
-
-![1465579567f474dbcbad4a1611cf06f](1465579567f474dbcbad4a1611cf06f.jpg)
-
-## 游戏运行过程
-
-![5c52d3952e22823237e49f637167d56](5c52d3952e22823237e49f637167d56.png)
-
-# UMG
-
-## 分类
-
-- UPanelWiget：可以有多个子控件
-- UWiget：不能有子控件（按钮是特例，有一个子控件）
-
-UMG不是Actor，无法直接置入Level中，需要某些Actor控制UMG的生命周期
-
-## 位置
-
-### 单点对齐
-
-- 以锚点为原点，控件的**对齐点**的坐标为位置
-- 对齐点受Alignment控制（类似Sprite Editor里的锚点，相对值）
-
-### 一边对齐
-
-假设与上边对齐
-
-- 只剩y坐标，x坐标变成了两个(控件左边到屏幕左侧的距离、控件右侧到屏幕右侧的距离)
-- 不存在对齐点？
-
-# 动画
-
-## Animation Sequence
-
-## Blend Space
-
-## 动画叠加
-
-- 动画混合是 (k1 A + k2 B)/(k1+k2)，动画叠加是(A - C) + B
-- 设定了一个动画的Additive Anim Type及基础姿势，即表明该动画为A，基础姿势为C
-- 之后通过蓝图节点或蒙太奇指定B
-
-## 蒙太奇
-
-- 若干段动画的结合，有多个插槽，每个插槽上可放置若干动画，还将整个时间轴分为若干片段
-- 播放蒙太奇时，可指定插槽，可利用片段进行复杂的流程控制
-- 蒙太奇不是持续播放的动画，而是插入动画。在原本的动画输入输出间插入一个蒙太奇节点，效果是，调用播放蒙太奇动画时，蒙太奇动画覆盖原有动画，否则播放原有动画
-
-## 姿势
-
-- 特指蒙皮动画的一帧
-- 可以从动画中截取一帧，生成姿势
 
