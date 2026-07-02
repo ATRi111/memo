@@ -344,11 +344,10 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 ### InputMappingContext
 
-- 
+- 规定`FKey`到`UInputAction`的映射的数据文件
+- 配合`UInputModifier`可将不同方向的输入统一映射到一个`InputAction`上
 
-### UInputModifier
-
-- 
+- 配合`UInputTrigger`可实现双击、长按等复杂输入判定
 
 ## World
 
