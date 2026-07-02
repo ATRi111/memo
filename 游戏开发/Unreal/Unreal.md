@@ -65,8 +65,10 @@
 
 ### Actor
 
-- 指`AActor`及其子类实例，以及派生出的蓝图类
-- 只有Actor能直接放到场景中，自身也有一些逻辑（一般只有整个Actor共享的逻辑/数据），类似`MonoBehavior+GameObject`
+- 指`AActor`及其子类实例，或派生出的蓝图类及其实例
+- 只有Actor能直接放到场景中，自身也有一些逻辑（一般只有整个Actor共享的逻辑/数据），类似`GameObject`
+- Actor可以挂载到其他Actor上，子Actor跟随父Actor移动（但**不会随父Actor一同被销毁**）
+- 每个Actor被视为一个整体，在Outliner中仅显示Actor及其层级关系，不会显示Coponent
 
 生命周期（按顺序）：
 
@@ -97,7 +99,11 @@
 ### Component
 
 - 指`UActorComponent`及其子类对象，以及派生出的蓝图类
-- Component挂载在Actor或其他Component上，类似`MonoBehaviour+GameObject`
+- 一个Actor持有若干Component，类似`MonoBehaviour`
+  - 与Unity不同的是，Coponent之间也有层级关系，每个Coponent也有各自的Transform
+  - Coponent间的层级关系仅在Actor的Details/Component窗口中显示
+  - Actor被销毁时，其持有的Coponent也被销毁；销毁Component时，默认情况下不会递归地销毁其子Component
+
 
 生命周期（按顺序）：
 
@@ -213,7 +219,7 @@
   - 能够通过**蓝图接口**绕开单继承的限制
   - 可以有多个蓝图类继承同一C++类
 - 除了程序，还有设置参数默认值等功能，且不同蓝图类的编辑窗口不同（如Actor蓝图中可设置Component）
-- 要让蓝图访问C++类成员，需要用`UCLASS`宏修饰类，设为对蓝图可见
+- 要创建蓝图类，需要用`UCLASS(Blueprintable,...)`修饰要继承的C++类
   - 静态函数和成员函数需要用`UFUNCTION`修饰，设为对蓝图可见
     - 调用成员函数需要指定实例(Target)，如果是父类的成员函数，Target默认为self
 
@@ -238,11 +244,15 @@
 
 ### Actor蓝图
 
-- 指继承自某个`AActor`子类的蓝图
-- 可以在C++中为Actor挂载组件；在**构造函数**中挂载的组件，创建出的Actor蓝图中能直接看到（只读）
-- 也可以在Actor蓝图中挂载组件，C++中可以定义/获取子组件（也可以由蓝图）
+- 指继承自某个`AActor`子类的蓝图，其中包含一个Actor和若干个子Coponent（及其参数等）
+  - 继承自Component的蓝图类不像Actor蓝图那样有充分的编辑器支持
 
-### Coponent蓝图
+- 可以在C++中为Actor挂载组件；在**构造函数**中挂载的组件，创建出的Actor蓝图中能直接看到（只读）
+- 也可以在Actor蓝图中挂载组件，然后C++中可以定义/获取子组件
+- Actor蓝图中可以添加**Child Actor**，这是一种特殊的**Component**
+  - 该Coponent运行时生成一个子Actor（挂载到父Actor下），并且在父Actor销毁时同时销毁子Actor
+  - 该Coponent的`Child Actor Class`参数规定了要生成哪个Actor蓝图的实例
+
 
 ### 关卡蓝图
 
