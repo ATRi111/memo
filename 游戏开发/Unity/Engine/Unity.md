@@ -412,9 +412,11 @@ Shader "Custom/KeywordExample"
 
 **在上图所示的设置下有：**
 $$
-将网格坐标到世界坐标的变换记为T,T为线性变换 \hfill \\
-T(1,0,0)=(0.5a,0.5b,0) \quad T(0,1,0)=(-0.5a,0.5b,0) \quad T(0,0,1)=(0,0.5bc,c) \hfill \\
-T(0.5c,0.5c,0).xy \equiv T(0,0,1).xy \quad (忽略z分量两边恒等,而z分量不影响屏幕坐标) \hfill \\
-(a,b,c):\mathrm{CellSize} \hfill \\
+\begin{aligned}
+& 将网格坐标到世界坐标的变换记为T,T为线性变换  \\
+& T(1,0,0)=(0.5a,0.5b,0) \quad T(0,1,0)=(-0.5a,0.5b,0) \quad T(0,0,1)=(0,0.5bc,c)  \\
+& T(0.5c,0.5c,0).xy \equiv T(0,0,1).xy \quad (忽略z分量两边恒等,而z分量不影响屏幕坐标)  \\
+& (a,b,c):\mathrm{CellSize}  \\
+\end{aligned}
 $$
 
