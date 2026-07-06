@@ -373,6 +373,20 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 - 通常包含`GameMode`相关的游戏数据（默认包含玩家列表，当前`GameMode`，当前游戏状态等数据；可人为添加其他数据）
 - 由服务器发给客户端
 
+## Navigation
+
+### Recast
+
+- 离线生成NavMesh的库
+
+### Detour
+
+- 实现寻路算法(A*+漏斗算法)的库
+
+### RVO
+
+- 实现多物体动态避障算法(运动预测)的库
+
 # 蓝图
 
 - 几类资源文件的统称，类似于支持多种资源类型的Prefab，与C++协同使用（非必须）
