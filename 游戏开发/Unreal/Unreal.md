@@ -21,7 +21,7 @@
   - 回收后**不压缩**（不将不连续分布的对象移动到一起），导致内存碎片增多，进而导致更频繁的申请更大内存
   - 开发者无法自行实现压缩，只能尽量减少GC，减少内存分配（如对象池）
 - **`UObject`的GC必须由引擎管理**
-  - 任何情况下都不应该定义`UObject`类实例（即不能分配到栈上）
+  - 任何情况下都不应该直接定义`UObject`类实例（即不能分配到栈上）
   - 对于本地变量、函数参数，可以定义`UObject`指针或引用（如果确定存在）
     - 要确保作用域内`UObject`存活，可使用`TStrongObjectPtr`
 
@@ -234,6 +234,11 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 - 构造新`UObject`实例时，将其CDO的占用的整块内存直接复制一份，而不必执行完整的构造逻辑，以实现**高效创建**
 - 构造全局/静态变量时，将所有`UObject`子类的`UClass* Z_Construct_UClass_[类名]()`函数指针添加到列表中（每个模块一个列表）；加载模块时，调用列表中的所有函数，调用到`Z_Construct_UClass_[类名]`时进一步调用了`UClass::CreateDefaultObject()`，从而创建出CDO
 
+## DataAsset
+
+- 指`UDataAsset`（直接继承自`UObject`）及其子类实例，或派生出的蓝图类及其实例
+- 
+
 ## Actor
 
 ### Actor
@@ -389,7 +394,7 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 # 蓝图
 
-- 几类资源文件的统称，类似于支持多种资源类型的Prefab，与C++协同使用（非必须）
+- 几类资源文件的统称，类似于Prefab（但不仅限于Actor），与C++协同使用（非必须）
 
 - 通过继承`FBlueprintEditor`，各种不同的蓝图有不同的编译器
 
