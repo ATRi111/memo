@@ -23,24 +23,18 @@
 - **`UObject`的GC必须由引擎管理**
   - 任何情况下都不应该直接定义`UObject`类实例（即不能分配到栈上）
   - 对于本地变量、函数参数，可以定义`UObject`指针或引用（如果确定存在）
-    - 要确保作用域内`UObject`存活，可使用`TStrongObjectPtr`
-
   - `UObject`类中，所有作为成员变量的`TObjectPtr<UObject>`应该由`UPROPERTY`修饰，这样才受引擎管理
-  - 原生C++类中可以`Uobject`指针成员不能直接delete
-    - 可以令原生类继承`FGCObject`，然后显式将成员注册到`Collector`
-    - 也可以用`TStrongObjectPtr`，确保生命周期内`UObject`存活
-
 - **原生C++对象必然不参与标记-清除，可以自行GC，或使用智能指针**
+  - 可以令原生类继承`FGCObject`，然后显式将成员注册到`Collector`
+
 - UE会自动检查引用关系并创建**GC集群（Cluster）**
   - 如果有若干个`UObject`实例仅被某一`UObject`实例引用，那么它们构成集群，该`UObject`是集群的Root
   - 检查集群是否存活时，仅检查Root是否存活即可
-
 - UE使用一个`GUObjectArray`维护所有受引擎GC管理的对象
   - 是一个连续数组，其中每个元素是一个结构体，包含对象指针、GC状态等信息
   - 所有`UObject`有`InternalIndex`成员，表示它在`GUObjectArray`中的索引
   - 编译阶段每个类会生成`ReferenceTokenStream`，确定受引擎GC管理成员以及它们在类内的偏移量，以便GC时快速检索
   - `GUObjectArray`只能添加元素，不会删除已经不存活的元素（这也确保`InternalIndex`的有效性）
-
 - Roots：垃圾回收器完全确定当前不会被回收的对象
   - 静态变量，栈上变量等
   - `AddRoots`显式添加的对象
@@ -218,6 +212,18 @@ DEFINE_FUNCTION(UMyThing::execHeal)
   - 网络同步
   - 工厂函数：`NewObject<T>()`和`CreateDefaultObject<T>()`
 
+### TObjectPtr
+
+- 专门用于**UObject子类成员变量**的智能指针（还需要使用`UPROPERTY`宏，这样才受引擎GC管理）
+
+### TStrongObjectPtr
+
+- 
+
+### TSoftObjectPtr
+
+- 
+
 ### UProperty
 
 - `UProperty`是用于实现反射的类，`UPROPERTY`宏用于修饰`UObject`指针成员
@@ -237,6 +243,7 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 ## DataAsset
 
 - 指`UDataAsset`（直接继承自`UObject`）及其子类实例，或派生出的蓝图类及其实例
+- 提供了在编辑器中生成资产文件(.uasset)的能力，文件与类实例的内容相同
 - 
 
 ## Actor
