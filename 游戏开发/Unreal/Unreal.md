@@ -23,7 +23,8 @@
 - **`UObject`的GC必须由引擎管理**
   - 任何情况下都不应该直接定义`UObject`类实例（即不能分配到栈上）
   - 对于本地变量、函数参数，可以定义`UObject`指针或引用（如果确定存在）
-  - `UObject`类中，所有作为成员变量的`TObjectPtr<UObject>`应该由`UPROPERTY`修饰，这样才受引擎管理
+  - `UObject`子类中，所有作为成员变量的`TObjectPtr<UObject>`应该由`UPROPERTY`修饰，这样才受引擎管理
+  - 非`UObject`子类中，可使用`TStrongObjectPtr`
 - **原生C++对象必然不参与标记-清除，可以自行GC，或使用智能指针**
   - 可以令原生类继承`FGCObject`，然后显式将成员注册到`Collector`
 
@@ -214,15 +215,18 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 ### TObjectPtr
 
-- 专门用于**UObject子类成员变量**的智能指针（还需要使用`UPROPERTY`宏，这样才受引擎GC管理）
+- 用于`UObject`子类**成员变量**的智能指针，确保类实例存活时，该成员也存活（还需要使用`UPROPERTY`宏，这样才受引擎GC管理）
+- 不适用`TObjectPtr`，且不需要强制确保变量存活的场合，应使用裸指针
 
 ### TStrongObjectPtr
 
-- 
+- 用于`UObject`子类变量的指针，确保类实例存活（非`UObject`子类的成员）时，或位于作用域内（局部变量）时，该变量也存活
 
 ### TSoftObjectPtr
 
-- 
+- 用于`UDataAsset`子类成员变量的指针，不将对象加载到内存，也不影响GC（同样需要使用`UPROPERTY`宏）
+- 本质上存的是资产的路径（`FTopLevelAssetPath`）
+- 访问该指针前需要人为（同步/异步）加载，否则返回`nullptr`
 
 ### UProperty
 
@@ -240,18 +244,31 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 - 构造新`UObject`实例时，将其CDO的占用的整块内存直接复制一份，而不必执行完整的构造逻辑，以实现**高效创建**
 - 构造全局/静态变量时，将所有`UObject`子类的`UClass* Z_Construct_UClass_[类名]()`函数指针添加到列表中（每个模块一个列表）；加载模块时，调用列表中的所有函数，调用到`Z_Construct_UClass_[类名]`时进一步调用了`UClass::CreateDefaultObject()`，从而创建出CDO
 
+## 数据结构
+
+- 容器继承`UObject`，GC同样应受引擎管理
+  - 如果元素是`UObject`子类，使用指针即可
+  - 如果元素非`UObject`子类，视需求使用`TUniquePtr`（容器有元素的所有权)，指针（无所有权），实例（连续存储，放弃多态）
+
+| 数据结构 | STL中的对应     | 说明 |
+| -------- | --------------- | ---- |
+| `TArray` | `vector`        |      |
+| `TMap`   | `unordered_map` |      |
+| `TSet`   | `unordered_set` |      |
+
+
+
 ## DataAsset
 
 - 指`UDataAsset`（直接继承自`UObject`）及其子类实例，或派生出的蓝图类及其实例
 - 提供了在编辑器中生成资产文件(.uasset)的能力，文件与类实例的内容相同
-- 
 
 ## Actor
 
 ### Actor
 
 - 指`AActor`及其子类实例，或派生出的蓝图类及其实例
-- 只有Actor能直接放到场景中，自身也有一些逻辑（一般只有整个Actor共享的逻辑/数据），类似`GameObject`
+- 只有Actor蓝图能直接放到场景中，以创建一个Actor实例，类似`GameObject`自身也有一些逻辑（一般只有整个Actor共享的逻辑/数据）
 - Actor可以挂载到其他Actor上，子Actor跟随父Actor移动（但**不会随父Actor一同被销毁**）
 - 每个Actor被视为一个整体，在Outliner中仅显示Actor及其层级关系，不会显示Component
 
@@ -278,8 +295,9 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 | `EndPlay`                  | 销毁前             |                                                  |
 | `Destroyed`                | 销毁后             |                                                  |
 
-- 以上所有生命周期函数，都**严格分阶段串行调用**；同时创建/运行/销毁的一系列物体，
+- 以上所有生命周期函数，都**严格分阶段串行调用**；同时创建/运行/销毁的一系列物体
 - Actor没有禁用状态，但可以直接`SetActorTickEnabled`
+- 对于人为放到场景中的物体，运行时仍需将其从硬盘复制到内存中；先调用构造函数，再反序列化（编辑器中设置好的值此时生效）
 
 ### Component
 
@@ -368,11 +386,14 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 - 指`ULevel`实例，不应该继承此类
 - `ULevel`用一个数组记录其中的所有Actor，其中的0号元素是`AWorldSetting`（当某个关卡被用作主关卡时，其`AWorldSetting`对World生效）
 - 额外持有一个特殊的Actor，`ALevelScriptActor`，是关卡蓝图的父类
+- 分为Persistent Level（同时只存在一个）和Streaming Level（同时存在若干个，自由加载/卸载）
 
 ### World
 
 - 指`UWorld`实例，不应该继承此类
-- World中可以包含若干个Level，运行时动态变化
+- World中可以包含若干个Level
+  - 加载/卸载Streaming Level在一个World中进行
+  - 切换Persistent Level会导致当前World被销毁，并创建新的World
 
 ### GameMode
 
@@ -385,19 +406,160 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 - 通常包含`GameMode`相关的游戏数据（默认包含玩家列表，当前`GameMode`，当前游戏状态等数据；可人为添加其他数据）
 - 由服务器发给客户端
 
+### WorldSubsystem
+
+- 指`UWorldSubsystem`实例，生命周期与World基本相同，如天气系统，寻路系统等
+
+## Collision
+
+### CollisionChannel
+
+- 将物体和射线划分到不同的频道，以控制物体接触时的行为，以及射线检测的行为；用`ECollisionChannel`的各个枚举值表示
+- `ECollisionChannel`进一步分为`EObjectTypeQuery`和`ETraceTypeQuery`，如字面意思，分别用于规定实际物体和射线这类抽象物体的Channel
+  - 引擎预设了一些频道（不可删除），可以自行添加额外的频道
+  - 每个参与碰撞的组件总是属于一个频道，并可以分别设置对其他频道的组件和射线的响应
+  - 两个组件接触时，可能触发双方的Overlap事件或Hit事件
+  - 射线检测不会触发组件的Overlap或Hit事件
+
+**组件A与组件B接触，第一行表示组件A对B所属频道的碰撞响应，第一列表示组件B对A所属频道的碰撞响应：**
+
+|         | Ignore | Overlap               | Block                                   |
+| ------- | ------ | --------------------- | --------------------------------------- |
+| Ignore  | 无行为 | 无行为                | 无行为                                  |
+| Overlap | 无行为 | 触发A和B的Overlap事件 | 触发A和B的Overlap事件                   |
+| Block   | 无行为 | 触发A和B的Overlap事件 | A和B发生物理上的碰撞，触发A和B的Hit事件 |
+
+**射线A命中了组件B，第一行表示组件B对A所属频道的碰撞响应：**
+
+| Ignore         | Overlap      | Block                      |
+| -------------- | ------------ | -------------------------- |
+| 不被射线检测到 | 被射线检测到 | 被射线检测到，且让射线中止 |
+
+### Collision Preset
+
+<img src="屏幕截图 2026-07-28 150212.png" alt="屏幕截图 2026-07-28 150212"  />
+
+- 自身所属的频道，连同对所有频道的响应，共同构成一个Collision Preset
+- 参与碰撞的组件可以直接选择一个Collision Preset，也可以单独自定义
+
 ## Navigation
+
+### Navigation System
+
+- 目前版本的类名为`UNavigationSystemV1`，地位类似WorldSubsystem（但只是继承了`UObject`）
+- `UNavigationSystemV1`持有若干导航数据（`NavDataSet`），其中一个为主导航数据（`MainNavData`）
+- 寻路者被称为Agent，每个Agent需要考虑一系列与其尺寸、移动能力有关的参数
+- 所有可能参与导航数据生成的**有实体组件**均属于`UPrimitiveComponent`；是否确实参与，由`IsNavigationRelevant`函数判断：
+  - 最基本的要求是`CanEverAffectNavigation`为`true`
+  - 若`HasCustomNavigableGeometry`返回`DontExport`或`EvenIfNotCollidable`，无条件地认为其参与
+  - 若`HasCustomNavigableGeometry`返回`Yes`或`No`，正常地检查其对`ECC_Pawn`或`ECC_Vehicle`的碰撞响应是否为`Block`
+- 还有`UNavModifierComponent`、`UNavLinkCustomComponent`等影响导航数据，`CanEverAffectNavigation`为`true`，但没有实体的组件
+
+### NavDataConfig
+
+- 指`FNavDataConfig`类实例，其中包含各类导航数据共通的一些参数，每个`FNavDataConfig`通常与一类Agent对应
+- `FNavDataConfig`的成员：
+  - `AgentRadius`：Agent的半径
+  - `AgentStepHeight`：Agent能跨越的高度
+  - `NavDataClass`：要生成的导航数据是哪个类（`AActor`的哪个子类）
+  - ......
+- `UNavigationSystemV1`有`SupportedAgents`成员（`NavDataConfig`数组），表示项目支持的Agent类型（在ProjectSettings中设置）
+
+### NavigationData
+
+- 指`ANavigationData`及其子类Actor，所有导航数据的父类
+  - 可以派生出`ARecastNavMesh`，`ANavigationGraph`等不同类型的导航数据
+  - 包含生成导航数据依赖的参数（`FNavDataConfig`，`ERuntimeGenerationType`），并持有生成结果
+  - **创建Actor时，会自动将NavDataConfig设为与SupportedAgents中的某个元素相同，其参数可以再调整，但仍应当与某类Agent匹配**
+  - Actor**可能**会被注册到Navigation System的`NavDataSet`中（？）
+- `ERuntimeGenerationType`控制导航数据的更新方式（每个导航数据的更新方式是独立的）：
+  - Static：运行时完全不更新NavMesh
+  - Dynamic Modifiers Only：运行时只更新NavModifier和NavLink
+  - Dynamic：运行时完整地更新NavMesh
+
+### NavMeshBoundsVolume
+
+- 指`NavMeshBoundsVolume`类Actor，用于划定寻路区域（并不是只有NavMesh能用）
+- 要使用寻路，Level中应当有至少一个NavMeshBoundsVolume
+- NavMeshBoundsVolume同样有`SupportedAgents`参数（在项目支持的SupportedAgents中勾选若干个），表示此Volume用于哪些类型的Agent
+- 开始生成导航数据时，会检查Level中所有NavMeshBoundsVolume的SupportedAgents，自动生成其要求的导航数据Actor（见`NavDataClass`成员）
+- 生成导航数据时，每个NavigationData通过其NavDataConfig确定哪些NavMeshBoundsVolume作用于自身（见`UNavigationSystemV1::GetNavigationBoundsForNavData`）
+
+### NavMesh
+
+- 要生成NavMesh，通常需要放置NavMeshBoundsVolume（会自动生成RecastNavMesh）
+- `ARecastNavMesh`：用于生成NavMesh这类导航数据的Actor
+- `ARecastNavMesh`在`ANavigationData`的基础上，额外增加了一些NavMesh才关注的参数：
+  - `NavMeshResolutionParams`：体素网格的分辨率
+  - `AgentRadius`：Agent的半径
+  - `AgentMaxSlope`：Agent移动时允许的最大坡度
+  - `TileSizeUU`：每个Tile的边长（XZ平面内）
+  - .......
+- NavMesh是用于寻路的(凸)多边形网格
+  - 取各个多边形中心点，考虑其邻接关系和和距离，便得到一张图，在图上进行A*寻路，确定最短路径经过的多边形
+  - 确定经过的多边形后，再考虑这些多边形的具体形状，通过漏斗算法得到更精确的最短路径
+- World被划分成若干Tile，每个Tile独立地生成NavMesh（支持并发，及部分Tile的热更新）
+
+### NavModifier
+
+- NavModifier指修改NavMesh中多边形的移动代价（具体来说，是通过修改多边形的AreaClass来实现的）
+- 在场景中创建`NavModifierVolume`类的Actor，设置好其AreaClass，便会影响多边形的AreaClass
 
 ### Recast
 
-- 离线生成NavMesh的库
+- 生成NavMesh的库
+- 对于每个Tile，首先生成一个`rcHeightfield`，将该Tile划分为若干垂直于XZ平面且截面为正方形的柱子
+  - 每个柱子内，有若干个高度区间(span)，从低到高有序排列，用一个链表来存储
+  - Y方向上同样每隔一定高度划分一格，因此span的上下边界用`uint`而非`float`来记录
+  - 对碰撞用Mesh进行保守光栅化，即初步得到`rcHeightfield`
+
+```c++
+struct rcSpanData
+{
+	rcSpanUInt smin;		///span的下边界
+	rcSpanUInt smax;		///span的上边界
+	unsigned int area;		///这一span的类型,如0表示障碍物,63表示可行走(用户通过传入的回调函数来自定义)
+};
+struct rcSpan
+{
+	rcSpanData data;
+	rcSpan* next;		///链表中的下一个span
+};
+struct rcHeightfield
+{
+	int width;			///X方向格数
+	int height;			///Z方向格数
+	rcReal bmin[3];  	///世界空间的AABB的"最小点”
+	rcReal bmax[3];		///世界空间的AABB的"最大点"
+	rcReal cs;			///X/Z方向上一格的长度
+	rcReal ch;			///Y方向上一格的长度
+	rcSpan** spans;		///有(width×height)个元素的数组，每个元素是一个span链表的头节点
+};
+```
+
+- 得到`rcHeightfield`后，进一步考虑相邻span间的位置关系，结合移动者的参数（跳跃、攀爬、匍匐），判断相邻span间是否可达，并对span进行压缩，得到`rcBuildCompactHeightfield`
 
 ### Detour
 
-- 实现寻路算法(A*+漏斗算法)的库
+- 实现A*和漏斗算法的库
+- 每次发出寻路请求时，创建`dtNavMeshQuery`；每个`dtNavMeshQuery`有一个`dtNodePool`和一个`dtNodeQueue`
+  - `dtNode`表示A*中的节点，绑定到NavMesh中的一个多边形上
+  - 每次`dtNodePool`中在一个连续数组中预分配充分多的`dtNode`
+  - `dtNodeQueue`即Open堆，其`modify`函数支持重排序元素（不是带元素索引的堆，因此需要遍历整个堆查找特定元素）
 
-### RVO
+```c++
+struct dtNode
+{
+	dtReal pos[3];				///多边形中心点的坐标
+	dtReal cost;				///GCost
+	dtReal total;				///FCost
+	unsigned int pidx : 30;		///父节点在dtNodePool中的下标
+	unsigned int flags : 2;		///0=未确定, 1=Open, 2=Closed
+	dtPolyRef id;				///多边形的索引（Tile编号+Tile内偏移）
+};
+```
 
-- 实现多物体动态避障算法(运动预测)的库
+
 
 # 蓝图
 
