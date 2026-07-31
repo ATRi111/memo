@@ -447,7 +447,7 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 ### Navigation System
 
 - 目前版本的类名为`UNavigationSystemV1`，地位类似WorldSubsystem（但只是继承了`UObject`）
-- `UNavigationSystemV1`持有若干导航数据（`NavDataSet`），其中一个为主导航数据（`MainNavData`）
+- `UNavigationSystemV1`持有若干导航数据（`NavDataSet`），其中一个为主导航数据（`MainNavData`），还有待注册的导航数据（`NavDataRegistrationQueue`）
 - 寻路者被称为Agent，每个Agent需要考虑一系列与其尺寸、移动能力有关的参数
 - 所有可能参与导航数据生成的**有实体组件**均属于`UPrimitiveComponent`；是否确实参与，由`IsNavigationRelevant`函数判断：
   - 最基本的要求是`CanEverAffectNavigation`为`true`
@@ -457,21 +457,21 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 ### NavDataConfig
 
-- 指`FNavDataConfig`类实例，其中包含各类导航数据共通的一些参数，每个`FNavDataConfig`通常与一类Agent对应
+- 指`FNavDataConfig`类实例，其中包含各类导航数据共通的一些参数，每个`FNavDataConfig`通常与一类Agent对应，因此也称之为**Agent Type**
 - `FNavDataConfig`的成员：
   - `AgentRadius`：Agent的半径
   - `AgentStepHeight`：Agent能跨越的高度
   - `NavDataClass`：要生成的导航数据是哪个类（`AActor`的哪个子类）
   - ......
-- `UNavigationSystemV1`有`SupportedAgents`成员（`NavDataConfig`数组），表示项目支持的Agent类型（在ProjectSettings中设置）
+- `UNavigationSystemV1`有`SupportedAgents`成员（`NavDataConfig`数组），表示项目支持的所有Agent Type（在ProjectSettings中设置）
 
-### NavigationData
+### NavData
 
-- 指`ANavigationData`及其子类Actor，所有导航数据的父类
+- 指`ANavigationData`及其子类**Actor**，是所有导航数据的父类
   - 可以派生出`ARecastNavMesh`，`ANavigationGraph`等不同类型的导航数据
   - 包含生成导航数据依赖的参数（`FNavDataConfig`，`ERuntimeGenerationType`），并持有生成结果
-  - **创建Actor时，会自动将NavDataConfig设为与SupportedAgents中的某个元素相同，其参数可以再调整，但仍应当与某类Agent匹配**
-  - Actor**可能**会被注册到Navigation System的`NavDataSet`中（？）
+  - **创建NavData时，会自动将NavDataConfig设为与某个Agent Type相同，其参数可以再调整，但仍应当与某个Agent Type匹配**
+  - NavData被创建后，首先进入`NavDataRegistrationQueue`，导航系统之后在**合适的时机**将**符合条件的**NavData其真正注册到`NavDataSet`（见`UNavigationSystemV1::RegisterNavData`）
 - `ERuntimeGenerationType`控制导航数据的更新方式（每个导航数据的更新方式是独立的）：
   - Static：运行时完全不更新NavMesh
   - Dynamic Modifiers Only：运行时只更新NavModifier和NavLink
@@ -482,8 +482,9 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 - 指`NavMeshBoundsVolume`类Actor，用于划定寻路区域（并不是只有NavMesh能用）
 - 要使用寻路，Level中应当有至少一个NavMeshBoundsVolume
 - NavMeshBoundsVolume同样有`SupportedAgents`参数（在项目支持的SupportedAgents中勾选若干个），表示此Volume用于哪些类型的Agent
-- 开始生成导航数据时，会检查Level中所有NavMeshBoundsVolume的SupportedAgents，自动生成其要求的导航数据Actor（见`NavDataClass`成员）
-- 生成导航数据时，每个NavigationData通过其NavDataConfig确定哪些NavMeshBoundsVolume作用于自身（见`UNavigationSystemV1::GetNavigationBoundsForNavData`）
+- 开始生成导航数据时，会为每个**系统支持的Agent Type**（不管NavMeshBoundsVolume有没有勾选）补上相应的NavData（如果Level中没有）
+  - 不建议人为手动放置NavData，因为
+- 生成导航数据时，每个NavigationData和各个NavMeshBoundsVolume**匹配其Agent Type**，以确定哪些区域作用于自身（见`UNavigationSystemV1::GetNavigationBoundsForNavData`）
 
 ### NavMesh
 
