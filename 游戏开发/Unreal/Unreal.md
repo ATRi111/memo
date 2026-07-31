@@ -470,7 +470,8 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 - 指`ANavigationData`及其子类**Actor**，是所有导航数据的父类
   - 可以派生出`ARecastNavMesh`，`ANavigationGraph`等不同类型的导航数据
   - 包含生成导航数据依赖的参数（`FNavDataConfig`，`ERuntimeGenerationType`），并持有生成结果
-  - **创建NavData时，会自动将NavDataConfig设为与某个Agent Type相同，其参数可以再调整，但仍应当与某个Agent Type匹配**
+  - **自动生成NavData时，会将NavDataConfig设为与某个Agent Type相同，其参数可以再调整，但仍应当与某个Agent Type匹配**
+  - 不要手动放置NavData，那会导致Agent Type未设置（如NavMesh就用`UCLASS(notplaceable)`修饰）
   - NavData被创建后，首先进入`NavDataRegistrationQueue`，导航系统之后在**合适的时机**将**符合条件的**NavData其真正注册到`NavDataSet`（见`UNavigationSystemV1::RegisterNavData`）
 - `ERuntimeGenerationType`控制导航数据的更新方式（每个导航数据的更新方式是独立的）：
   - Static：运行时完全不更新NavMesh
@@ -482,8 +483,7 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 - 指`NavMeshBoundsVolume`类Actor，用于划定寻路区域（并不是只有NavMesh能用）
 - 要使用寻路，Level中应当有至少一个NavMeshBoundsVolume
 - NavMeshBoundsVolume同样有`SupportedAgents`参数（在项目支持的SupportedAgents中勾选若干个），表示此Volume用于哪些类型的Agent
-- 开始生成导航数据时，会为每个**系统支持的Agent Type**（不管NavMeshBoundsVolume有没有勾选）补上相应的NavData（如果Level中没有）
-  - 不建议人为手动放置NavData，因为
+- 开始生成导航数据时，如果World中有至少一个NavMeshBoundsVolume，会为每个**系统支持的Agent Type**（不管NavMeshBoundsVolume勾选了哪些）补上相应的NavData（如果Level中没有）
 - 生成导航数据时，每个NavigationData和各个NavMeshBoundsVolume**匹配其Agent Type**，以确定哪些区域作用于自身（见`UNavigationSystemV1::GetNavigationBoundsForNavData`）
 
 ### NavMesh
