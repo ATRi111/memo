@@ -477,6 +477,7 @@ DEFINE_FUNCTION(UMyThing::execHeal)
   - Static：运行时完全不更新NavMesh
   - Dynamic Modifiers Only：运行时只更新NavModifier和NavLink
   - Dynamic：运行时完整地更新NavMesh
+- NavData的EnableDrawing是Transient且默认为`false`，因此默认不绘制，需手动勾选。系统只会自动绘制默认的那个NavData（一般是NavMesh）
 
 ### NavMeshBoundsVolume
 
