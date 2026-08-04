@@ -453,6 +453,7 @@ DEFINE_FUNCTION(UMyThing::execHeal)
   - 最基本的要求是`CanEverAffectNavigation`为`true`
   - 若`HasCustomNavigableGeometry`返回`DontExport`或`EvenIfNotCollidable`，无条件地认为其参与
   - 若`HasCustomNavigableGeometry`返回`Yes`或`No`，正常地检查其对`ECC_Pawn`或`ECC_Vehicle`的碰撞响应是否为`Block`
+  - 特别地，引擎会强制让静态的BrushComponent参与导航数据生成（见`ABrush::ShouldExportStaticNavigableGeometry`)
 - 还有`UNavModifierComponent`、`UNavLinkCustomComponent`等影响导航数据，`CanEverAffectNavigation`为`true`，但没有实体的组件
 
 ### NavDataConfig
@@ -506,6 +507,11 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 - NavModifier指修改NavMesh中多边形的移动代价（具体来说，是通过修改多边形的AreaClass来实现的）
 - 在场景中创建`NavModifierVolume`类的Actor，设置好其AreaClass，便会影响多边形的AreaClass
+
+### NavOctree
+
+- 管理参与导航数据生成的组件的八叉树，由NavigationSystem持有，各个NavData从这里获取
+- 会影响导航数据的组件会被加入到
 
 ### Recast
 
