@@ -453,9 +453,10 @@ DEFINE_FUNCTION(UMyThing::execHeal)
   - 最基本的要求是`CanEverAffectNavigation`为`true`
   - 若`HasCustomNavigableGeometry`返回`Yes`或`No`，正常地检查其对`ECC_Pawn`或`ECC_Vehicle`的碰撞响应是否为`Block`
   - 若`HasCustomNavigableGeometry`返回`DontExport`或`EvenIfNotCollidable`，绕过检查
+  - 勾选`Dynamic Obstacle`的组件不参与一开始的导航数据生成，而是和`UNavModifierComponent`一样
   - 特别地，引擎会强制让静态的BrushComponent参与导航数据生成（见`ABrush::ShouldExportStaticNavigableGeometry`)
-  - 勾选`Dynamic Obstacle`的组件
 - 还有`UNavModifierComponent`、`UNavLinkCustomComponent`等影响导航数据，`CanEverAffectNavigation`为`true`，但没有实体的组件
+- 其余会碰撞但不影响导航数据的物体，由动态避障算法来处理
 
 ### NavDataConfig
 
