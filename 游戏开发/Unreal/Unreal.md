@@ -505,7 +505,12 @@ DEFINE_FUNCTION(UMyThing::execHeal)
   - 确定经过的多边形后，再考虑这些多边形的具体形状，通过漏斗算法得到更精确的最短路径
 - World被划分成若干Tile，每个Tile独立地生成NavMesh（支持并发，及部分Tile的热更新）
 
-### NavModifier
+### NavArea
+
+- 指`UNavArea`及其子类，每个实例(称为**AreaClass**)表示寻路中一类具有特定cost的区域；通过其`SupportedAgents`参数控制其对哪些Agent Type生效
+- 寻路系统预设了一些NavArea，它们的参数无法修改；可自行创建蓝图类继承
+
+### NavModifierVolume
 
 - NavModifier指修改NavMesh中多边形的移动代价（具体来说，是通过修改多边形的AreaClass来实现的）
 - 在场景中创建`NavModifierVolume`类的Actor，设置好其AreaClass，便会影响多边形的AreaClass
