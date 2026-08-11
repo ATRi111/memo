@@ -448,15 +448,20 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 - 目前版本的类名为`UNavigationSystemV1`，地位类似WorldSubsystem（但只是继承了`UObject`）
 - `UNavigationSystemV1`持有若干导航数据（`NavDataSet`），其中一个为主导航数据（`MainNavData`），还有待注册的导航数据（`NavDataRegistrationQueue`）
-- 寻路者被称为Agent，每个Agent需要考虑一系列与其尺寸、移动能力有关的参数
-- 所有可能参与导航数据生成的**有实体组件**均属于`UPrimitiveComponent`；是否确实参与，由`IsNavigationRelevant`函数判断：
+- 寻路者被称为**Agent**，每个Agent需要考虑一系列与其尺寸、移动能力有关的参数
+- 所有参与导航数据生成的组件称为**Nav-relevant component(导航相关组件)**，分以下几类：
+  - **Navigable geometry(导航几何)**：导航几何数据的来源，决定高度场的形状，进而决定NavMesh的形状
+  - **NavModifier(导航修饰器)**：规定特定区域移动开销的对象，生成完高度场后引入，使NavMesh中分出有特殊移动开销的多边形
+  - **NavLink(导航连接)**：规定区域间额外连接的对象，使NavMesh中不相邻或不可通过的多边形变得可达
+- Nav-relevant component均实现`INavRelevantInterface`，是否真正参与导航数据生成，由`IsNavigationRelevant`函数判断：
   - 最基本的要求是`CanEverAffectNavigation`为`true`
-  - 若`HasCustomNavigableGeometry`返回`Yes`或`No`，正常地检查其对`ECC_Pawn`或`ECC_Vehicle`的碰撞响应是否为`Block`
+  - 若`HasCustomNavigableGeometry`返回`Yes`或`No`，检查其对`ECC_Pawn`或`ECC_Vehicle`的碰撞响应是否为`Block`
   - 若`HasCustomNavigableGeometry`返回`DontExport`或`EvenIfNotCollidable`，绕过检查
-  - 勾选`Dynamic Obstacle`的组件不参与一开始的导航数据生成，而是和`UNavModifierComponent`一样
   - 特别地，引擎会强制让静态的BrushComponent参与导航数据生成（见`ABrush::ShouldExportStaticNavigableGeometry`)
-- 还有`UNavModifierComponent`、`UNavLinkCustomComponent`等影响导航数据，`CanEverAffectNavigation`为`true`，但没有实体的组件
-- 其余会碰撞但不影响导航数据的物体，由动态避障算法来处理
+- 所有Nav-relevant component中，继承了`UPrimitiveComponent`的组件通常属于**Navigable geometry**
+  - 如果勾选了`Dynamic Obstacle`，那么其变为NavModifier，且不参与导航数据烘焙
+- **NavModifier**包含`ANavModifierVolume`、`UNavModifierComponent`等对象
+- **其余会与Agent碰撞但不影响导航数据的物体，由动态避障算法来处理**
 
 ### NavDataConfig
 
@@ -474,11 +479,11 @@ DEFINE_FUNCTION(UMyThing::execHeal)
   - 可以派生出`ARecastNavMesh`，`ANavigationGraph`等不同类型的导航数据
   - 包含生成导航数据依赖的参数（`FNavDataConfig`，`ERuntimeGenerationType`），并持有生成结果
   - **自动生成NavData时，会将NavDataConfig设为与某个Agent Type相同，其参数可以再调整，但仍应当与某个Agent Type匹配**
-  - 不要手动放置NavData，那会导致Agent Type未设置（如NavMesh就用`UCLASS(notplaceable)`修饰）
+  - 不要手动放置NavData，那会导致Agent Type未设置（NavMesh就用`UCLASS(notplaceable)`修饰）
   - NavData被创建后，首先进入`NavDataRegistrationQueue`，导航系统之后在**合适的时机**将**符合条件的**NavData其真正注册到`NavDataSet`（见`UNavigationSystemV1::RegisterNavData`）
 - `ERuntimeGenerationType`控制导航数据的更新方式（每个导航数据的更新方式是独立的）：
   - Static：运行时完全不更新NavMesh
-  - Dynamic Modifiers Only：运行时只更新NavModifier和NavLink
+  - Dynamic Modifiers Only：运行时只更新NavModifier和NavLink（Navigable geometry会被忽略，除非将其设为Dynamic Obstacle）
   - Dynamic：运行时完整地更新NavMesh
 - NavData的EnableDrawing是Transient且默认为`false`，因此默认不绘制，需手动勾选。系统只会自动绘制默认的那个NavData（一般是NavMesh）
 
@@ -512,13 +517,17 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 ### NavModifierVolume
 
+- 指`ANavModifierVolume`类的Actor，具有AreaClass参数
+  - 对于NavMesh而言，**Volume必须和NavMesh接触**，才会影响NavMesh上重合区域的AreaClass
 - NavModifier指修改NavMesh中多边形的移动代价（具体来说，是通过修改多边形的AreaClass来实现的）
-- 在场景中创建`NavModifierVolume`类的Actor，设置好其AreaClass，便会影响多边形的AreaClass
+- 在场景中创建类的Actor，设置好其AreaClass，便会影响多边形的AreaClass
+- 加载Level时，如果放置了Volume，便将其注册到寻路系统，这会自动触发NavData重建
 
 ### NavOctree
 
-- 管理参与导航数据生成的组件的八叉树，由NavigationSystem持有，各个NavData从这里获取
-- 会影响导航数据的组件会被加入到
+- 指`UNavOctree`类，管理用于导航数据生成和更新的数据(`FNavigationRelevantData`)的八叉树
+- 由NavigationSystem持有并自动维护，各个NavData直接获取即可
+- 支持**按范围查询**（见`FindElementsWithBoundsTest`），大幅提高构建每个Tile时的效率（不必每次遍历所有数据）
 
 ### Recast
 
