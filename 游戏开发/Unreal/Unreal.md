@@ -533,9 +533,10 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 - 生成NavMesh的库
 - 对于每个Tile，首先生成一个`rcHeightfield`，将该Tile划分为若干垂直于XZ平面且截面为正方形的柱子
-  - 每个柱子内，有若干个高度区间(span)，从低到高有序排列，用一个链表来存储
+  - 每个柱子内，有若干个高度区间(span)，从低到高有序排列，用一个链表来存储，后续会压缩成连续数组
   - Y方向上同样每隔一定高度划分一格，因此span的上下边界用`uint`而非`float`来记录
   - 对碰撞用Mesh进行保守光栅化，即初步得到`rcHeightfield`
+- `rcSpan`是从`rcSpanPool`中分配的（默认容量2048），每个Tile持有若干个`rcSpanPool`，每用完一个就再分配一个
 
 ```c++
 struct rcSpanData
