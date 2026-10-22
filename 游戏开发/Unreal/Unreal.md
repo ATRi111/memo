@@ -51,7 +51,7 @@
 
 ## Unreal Header Tool
 
-- UE中包含的一个**可执行程序**，在编译之前就被调用，生成额外的头文件、源文件，参与后续编译（生成在`Intermediate`目录下）
+- UE中包含的一个**可执行程序**，**在编译之前就被调用，生成额外的头文件、源文件，参与后续编译**（生成在`Intermediate`目录下）
 - 对于每个含有至少一个`UCLASS`宏的头文件，生成一个`[头文件名].generated.h`和一个`[头文件名].gen.cpp`
   - 该头文件必须引用`[头文件名].generated.h`，`[头文件名].gen.cpp`会引用该头文件
   - `[头文件名].generated.h`包含`GENERATED_BODY(...)`等宏定义和函数声明
@@ -202,6 +202,8 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 ## UObject
 
+<img src="image-20261022133823292.png" alt="image-20261022133823292" style="zoom: 67%;" />
+
 ### UObject
 
 - 所有引擎对象的父类
@@ -267,6 +269,10 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 
 ### Actor
 
+<img src="image-20261022133901376.png" alt="image-20261022133901376" style="zoom:67%;" />
+
+*AActor直接继承自UObject*
+
 - 指`AActor`及其子类实例，或派生出的蓝图类及其实例
 - 只有Actor蓝图能直接放到场景中，以创建一个Actor实例，类似`GameObject`自身也有一些逻辑（一般只有整个Actor共享的逻辑/数据）
 - Actor可以挂载到其他Actor上，子Actor跟随父Actor移动（但**不会随父Actor一同被销毁**）
@@ -300,6 +306,10 @@ DEFINE_FUNCTION(UMyThing::execHeal)
 - 对于人为放到场景中的物体，运行时仍需将其从硬盘复制到内存中；先调用构造函数，再反序列化（编辑器中设置好的值此时生效）
 
 ### Component
+
+<img src="image-20261022133946616.png" alt="image-20261022133946616" style="zoom:67%;" />
+
+*UActorComponent直接继承自UObject*
 
 - 指`UActorComponent`及其子类对象，以及派生出的蓝图类
 - 一个Actor持有若干Component，类似`MonoBehaviour`

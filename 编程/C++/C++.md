@@ -2490,10 +2490,9 @@ priority_queue<ListNode*,vector<ListNode*>,Comparer> heads;
 - **智能指针本质上是包含指针的模板类，其本身不是指针**
 - **通常在栈上分配智能指针类实例，在堆上分配则仍需要主动释放**
 - **引用计数式内存管理的缺点：**
-  - 引用计数器的原子操作在多线程环境带来额外开销
-  - 对控制块的访问增加了缓存不命中的可能性
-  - 控制块的分配带来额外的空间开销（`make_shared`确保对象和控制块被分到连续的一块内存中，以减少内存碎片）
-  - 生命周期管理不够严格（开发者可能滥用智能指针）
+  - 引用计数器的原子操作在多线程环境带来额外开销（智能指针仅确保并发计数正确，对象本身的并发读写仍需额外处理）
+  - 控制块的分配带来额外的空间开销（**`make_shared`确保对象和控制块被分到连续的一块内存中**，以减少内存碎片）
+  - 生命周期管理不够严格，开发者可能滥用智能指针，强弱引用都归零后才会彻底释放内存
 
 
 ### unique_ptr
@@ -2521,30 +2520,53 @@ int main()
 ### shared_ptr
 
 - 其本身是一个结构体，包含一个指向**被管理对象**的指针，以及一个指向**控制块**的指针
+- 控制块：包含强引用计数器，弱引用计数器，分配器，删除器
+  - 强引用计数器：被强引用的次数，此计数变为0时调用删除器（如果还有弱引用，控制块不会被释放）
+  - 弱引用计数器：被弱引用的次数（除了每个`weak_ptr`，大于0个的`shared_ptr`都共用一个计数），此计数变为0时，控制块才被释放
+  - 删除器：定义了如何释放某个类的类实例
+    - 每个类有默认的删除器，用`default_delete<T>()`构造实例，以该实例为删除器的智能指针会自动调用`delete`关键字
 
-- 控制块：包含强引用计数器（通常为`std::atomic<long>`），弱引用计数器，分配器，删除器
+  - 分配器：定义了如何分配某个类的类实例
+
 
 ```c++
 struct control_block_base {
-    std::atomic<long> strong_count;
-    std::atomic<long> weak_count;
+    std::atomic<long> strong_count{1};
+    std::atomic<long> weak_count{1};
 
-    virtual void destroy() = 0;
-    virtual ~control_block_base() = default;
-};
+    void add_strong() noexcept { strong_count.fetch_add(1, std::memory_order_relaxed); }
+    void add_weak()   noexcept { weak_count.fetch_add(1, std::memory_order_relaxed); }
 
-template<typename T, typename Deleter = std::default_delete<T>>
-struct control_block_impl : control_block_base {
-    T* ptr;
-    Deleter deleter;
-
-    control_block_impl(T* p, Deleter d) : ptr(p), deleter(std::move(d)) {
-        strong_count.store(1, std::memory_order_relaxed);
-        weak_count.store(1, std::memory_order_relaxed);   // 属于第一个 shared_ptr 的弱计数
+    void release_strong() noexcept {
+        if (strong_count.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+            dispose();        // 仅释放了被管理对象
+            release_weak();   // 顺带归还那一份哨兵弱计数
+        }
+    }
+    void release_weak() noexcept {
+        if (weak_count.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+            destroy();        // 此刻才释放控制块自己
+        }
     }
 
-    void destroy() override {
-        deleter(ptr);
+    virtual void dispose() noexcept = 0;                       // 释放被管理对象
+    virtual void destroy() noexcept { delete this; }           // 释放控制块
+    virtual void* get_deleter(const std::type_info&) noexcept { return nullptr; }
+
+protected:
+    virtual ~control_block_base() = default;   // 只允许经 destroy() 销毁
+};
+
+template <class T, class Deleter = std::default_delete<T>>
+struct control_block_impl final : control_block_base {
+    T*      ptr;
+    Deleter deleter;
+
+    control_block_impl(T* p, Deleter d) : ptr(p), deleter(std::move(d)) {}
+
+    void dispose() noexcept override { deleter(ptr); }         // 只析构对象
+    void* get_deleter(const std::type_info& ti) noexcept override {
+        return typeid(Deleter) == ti ? std::addressof(deleter) : nullptr;
     }
 };
 ```
